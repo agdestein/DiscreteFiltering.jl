@@ -1,0 +1,13 @@
+name = "DiscreteFiltering"
+uuid = "34a6a658-598a-40e4-ac4c-64bca795fe02"
+authors = ["Syver Døving Agdestein <syverda@icloud.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

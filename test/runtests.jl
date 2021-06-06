@@ -1,6 +1,8 @@
 using DiscreteFiltering
 using Test
+using SafeTestsets
 
-@testset "DiscreteFiltering.jl" begin
-    # Write your tests here.
+@time @safetestset "Matrix assembly" begin
+    include("test_advection_matrix.jl")
+    include("test_diffusion_matrix.jl")
 end

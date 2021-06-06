@@ -1,5 +1,13 @@
+"Discrete filtering toolbox"
 module DiscreteFiltering
 
-# Write your package code here.
+using LinearAlgebra
+using SparseArrays
+
+# Matrix assembly
+include("advection_matrix.jl")
+include("diffusion_matrix.jl")
+
+export advection_matrix, diffusion_matrix
 
 end

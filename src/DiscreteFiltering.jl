@@ -11,6 +11,9 @@ include("Filter.jl")
 include("advection_matrix.jl")
 include("diffusion_matrix.jl")
 
-export advection_matrix, diffusion_matrix, TopHatFilter
+export advection_matrix,
+    diffusion_matrix,
+    TopHatFilter,
+    ConvolutionalFilter
 
 end

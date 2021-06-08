@@ -3,7 +3,7 @@ using Test
 using SafeTestsets
 
 @time @safetestset "Filters" begin
-    include("test_filter.jl")
+    include("test_TopHatFilter.jl")
 end
 
 @time @safetestset "Matrix assembly" begin

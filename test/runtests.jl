@@ -2,8 +2,13 @@ using DiscreteFiltering
 using Test
 using SafeTestsets
 
+@time @safetestset "Domains" begin
+    include("test_Domain.jl")
+end
+
 @time @safetestset "Filters" begin
     include("test_TopHatFilter.jl")
+    include("test_ConvolutionalFilter.jl")
 end
 
 @time @safetestset "Matrix assembly" begin

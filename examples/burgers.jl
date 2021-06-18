@@ -9,13 +9,23 @@ using Zygote
 ## Filter
 h₀ = 0.03
 h(x) = h₀ * (1 - 1 / 2 * cos(x))
+# dh = h'
+dh(x) = 0.0 h₀ / 2 * sin(x)
+α(x) = 1 / 3 * dh(x) * h(x)
 filter = TopHatFilter(h)
+
+
+## Domain
+a = 0.0
+b = 2π
+domain = PeriodicIntervalDomain(a, b)
+# domain = ClosedIntervalDomain(a, b)
 
 
 ## Discretization
 n = 500
-x = LinRange(2π / n, 2π, n)
-Δx = x[2] - x[1]
+x = discretize_uniform(domain, n)
+Δx = (b - a) / n
 
 Δx^2 / maximum(abs.(α.(x)))
 
@@ -31,10 +41,11 @@ ylims!((0, ylims()[2]))
 
 
 ## Get matrices
-C = advection_matrix(Δx, n)
-D = diffusion_matrix(Δx, n)
-W = filter_matrix(filter, x)
-R = inverse_filter_matrix(filter, x)
+C = advection_matrix(domain, n)
+D = diffusion_matrix(domain, n)
+W = filter_matrix(filter, domain, n)
+R = inverse_filter_matrix(filter, domain, n)
+A = spdiagm(α.(x))
 
 
 ## Exact solutions

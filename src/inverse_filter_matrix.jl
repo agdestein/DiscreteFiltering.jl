@@ -1,12 +1,66 @@
 """
-    inverse_filter_matrix(f, x[, ε])
+    inverse_filter_matrix(f, domain, n)
 
 Approximate inverse of discrete filtering matrix, given filter `f`.
 """
-function inverse_filter_matrix(::Filter, x) end
+function inverse_filter_matrix(::Filter, ::Domain, n) 
+    error("Not implemented")
+end
 
 
-function inverse_filter_matrix(f::TopHatFilter, x, ε = 1e-6)
+function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
+
+    degmax = 30
+
+    x = discretize_uniform(domain, n)
+
+    n = length(x)
+    h = f.width
+    R = spzeros(n, n)
+
+    # Get reconstruction weights for each point
+    for i = 1:n
+        # Point
+        xᵢ = x[i]
+
+        dists = abs.(x .- xᵢ)
+
+        # Find j such that xᵢ is reachable from xⱼ
+        j = dists .< h.(x)
+
+        # Polynomial degree (Taylor series order)
+        deg = min(degmax, max(1, floor(Int, √sum(j))))
+
+        # Vandermonde matrix
+        d = 1:deg
+        xⱼ = x[j]'
+        hⱼ = h.(xⱼ)
+        aⱼ = max.(xⱼ - hⱼ, domain.left)
+        bⱼ = min.(xⱼ + hⱼ, domain.right)
+        Δhⱼ = bⱼ - aⱼ
+
+        Vᵢ = @. 1 / (Δhⱼ * factorial(d)) * ((bⱼ - xᵢ)^d - (aⱼ - xᵢ)^d)
+
+        # Right-hand side
+        μᵢ = fill(0.0, deg)
+        μᵢ[1] = 1.0
+
+        # Fit weights
+        rᵢ = Vᵢ \ μᵢ
+
+        # Store weights
+        R[i, j] .= rᵢ[:]
+    end
+
+    R
+end
+
+
+function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
+
+    degmax = 30
+
+    x = discretize_uniform(domain, n)
 
     n = length(x)
     h = f.width
@@ -27,7 +81,7 @@ function inverse_filter_matrix(f::TopHatFilter, x, ε = 1e-6)
         j = dists[mininds][:] .< h.(x)
 
         # Polynomial degree (Taylor series order)
-        deg = sum(j)
+        deg = min(degmax, max(1, floor(Int, √sum(j))))
 
         # Vandermonde matrix
         d = 1:deg
@@ -38,25 +92,33 @@ function inverse_filter_matrix(f::TopHatFilter, x, ε = 1e-6)
         Vᵢ = @. 1 / (2hⱼ * factorial(d)) * ((xⱼ + sⱼ + hⱼ - xᵢ)^d - (xⱼ + sⱼ - hⱼ - xᵢ)^d)
 
         # Right-hand side
-        μᵢ = fill(0, deg)
-        μᵢ[1] = 1
+        μᵢ = fill(0.0, deg)
+        μᵢ[1] = 1.0
 
         # Fit weights
-        # rᵢ = Vᵢ \  μᵢ
-        rᵢ = (Vᵢ' * Vᵢ + ε * sparse(1.0I, deg, deg)) \ (Vᵢ' * μᵢ)
+        rᵢ = Vᵢ \ μᵢ
 
         # Store weights
-        R[i, j] .= rᵢ
+        R[i, j] .= rᵢ[:]
     end
 
     R
 end
 
 
-function inverse_filter_matrix(f::ConvolutionalFilter, x)
+function inverse_filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
     error("Not implemented")
-    n = length(x)
-    G = f.kernel
-    R = spzeros(n, n)
-    R
+    # n = length(x)
+    # G = f.kernel
+    # R = spzeros(n + 1, n + 1)
+    # R
+end
+
+
+function inverse_filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n)
+    error("Not implemented")
+    # n = length(x)
+    # G = f.kernel
+    # R = spzeros(n, n)
+    # R
 end

@@ -3,20 +3,28 @@ using DifferentialEquations
 using LinearAlgebra
 using Plots
 using SparseArrays
-using Zygote
+# using Zygote
 
 
 ## Filter
-h₀ = 0.03
-h(x) = h₀ * (1 - 1 / 2 * cos(x))
-α(x) = 1 / 3 * h'(x) * h(x)
+h₀ = 0.07
+h(x) = h₀# * (1 - 1 / 2 * cos(x))
+# dh = h'
+dh(x) = 0.0#h₀ / 2 * sin(x)
+α(x) = 1 / 3 * dh(x) * h(x)
 filter = TopHatFilter(h)
 
 
+## Domain
+a = 0.0
+b = 2π
+# domain = PeriodicIntervalDomain(a, b)
+domain = ClosedIntervalDomain(a, b)
+
 ## Discretization
-n = 500
-x = LinRange(2π / n, 2π, n)
-Δx = x[2] - x[1]
+n = 200
+x = discretize_uniform(domain, n)
+Δx = (b - a) / n
 
 Δx^2 / maximum(abs.(α.(x)))
 
@@ -36,11 +44,36 @@ plot!([x[1], x[end]], [Δx / 2, Δx / 2], label = "Δx/2")
 
 
 ## Get matrices
-C = advection_matrix(Δx, n)
-D = diffusion_matrix(Δx, n)
-W = filter_matrix(filter, x, 0.001)
-R = inverse_filter_matrix(filter, x, 0.001)
+C = advection_matrix(domain, n)
+D = diffusion_matrix(domain, n)
+W = filter_matrix(filter, domain, n)
+R = inverse_filter_matrix(filter, domain, n)
 A = spdiagm(α.(x))
+
+
+## Inspect matrices
+spy(W)
+spy(R)
+
+## Plot weights at different thicknesses
+pl = plot()
+for i in (n ÷ 10) * [0, 1, 2, 3, 4, 5] .+ 1
+    a = W[i, :]
+    inds = a.nzind
+    vals = a.nzval
+    ishift = inds .- i
+    inds1 = ishift .≤ n ÷ 2
+    inds2 = .!inds1
+    ishift[inds2] .-= n
+    plot!(pl, [ishift[inds2]; ishift[inds1]], [vals[inds2]; vals[inds1]], label = "i = $i")
+    # scatter!(
+    #     pl,
+    #     [ishift[inds2]; ishift[inds1]],
+    #     [vals[inds2]; vals[inds1]],
+    #     label = "i = $i",
+    # )
+end
+pl
 
 
 ## Exact solutions
@@ -57,6 +90,7 @@ uₕ_allbar = W * uₕ
 plot(x, uₕ, label = "Discretized")
 plot!(x, ūₕ, label = "Filtered-then-discretized")
 plot!(x, uₕ_allbar, label = "Discretized-then-filtered")
+title!("Initial conditions")
 
 
 ## Solve discretized problem
@@ -66,6 +100,7 @@ sol = solve(prob, abstol = 1e-6, reltol = 1e-4)
 
 plot(x, uₕ, label = "Initial conditions")
 plot!(x, sol(t), label = "Discretized")
+title!("Solution")
 
 
 ## Solve filtered-and-then-discretized problem
@@ -76,6 +111,7 @@ sol_bar = solve(prob_bar, abstol = 1e-6, reltol = 1e-4)
 plot(x, uₕ, label = "Initial")
 plot!(x, ūₕ, label = "Initial filtered")
 plot!(x, sol_bar(t), label = "Filtered-then-discretized")
+title!("Solution")
 
 
 ## Solve discretized-and-then-filtered problem
@@ -87,6 +123,7 @@ sol_allbar = solve(prob_allbar, abstol = 1e-6, reltol = 1e-4)
 plot(x, uₕ, label = "Initial")
 plot!(x, uₕ_allbar, label = "Initial discretized-then-filtered")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
+title!("Solution")
 
 
 ## Comparison
@@ -97,6 +134,7 @@ plot!(x, sol_bar(t), label = "Filtered-then-discretized")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
 # plot!(x, [u.(x, t), ū.(x, t)], label = "Exact")
 ylims!(minimum(uₕ), maximum(uₕ))
+title!("Solution")
 
 
 ## Relative error
@@ -106,7 +144,9 @@ err = abs.(sol(t) - u_exact) ./ maximum(abs.(u_exact))
 err_bar = abs.(sol_bar(t) - u_exact) ./ maximum(abs.(u_exact))
 err_allbar = abs.(sol_allbar(t) - u_exact) ./ maximum(abs.(u_exact))
 
+##
 plot()
 plot!(x, err, label = "Unfiltered discretized")
 plot!(x, err_bar, label = "Filtered-then-discretized")
 plot!(x, err_allbar, label = "Discretized-then-filtered")
+title!("Relative error")

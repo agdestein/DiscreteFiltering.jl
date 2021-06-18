@@ -21,4 +21,4 @@ makedocs(;
     pages = ["Home" => "index.md"],
 )
 
-deploydocs(; repo = "github.com/agdestein/DiscreteFiltering.jl")
+deploydocs(; repo = "github.com/agdestein/DiscreteFiltering.jl", devbranch = "main")

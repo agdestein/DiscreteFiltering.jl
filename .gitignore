@@ -4,3 +4,4 @@
 .vscode
 /docs/build/
 Manifest.toml
+output/

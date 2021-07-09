@@ -1,18 +1,8 @@
 using DiscreteFiltering
-using DifferentialEquations
+using OrdinaryDiffEq
 using LinearAlgebra
 using Plots
 using SparseArrays
-# using Zygote
-
-
-## Filter
-h₀ = 0.03
-h(x) = h₀ # * (1 - 1 / 2 * cos(x))
-# dh = h'
-dh(x) = 0.0 # h₀ / 2 * sin(x)
-α(x) = 1 / 3 * dh(x) * h(x)
-filter = TopHatFilter(h)
 
 
 ## Domain
@@ -23,11 +13,17 @@ domain = PeriodicIntervalDomain(a, b)
 
 
 ## Discretization
-n = 1000
+n = 500
 x = discretize_uniform(domain, n)
 Δx = (b - a) / n
 
-Δx^2 / maximum(abs.(α.(x)))
+
+## Filter
+h₀ = Δx / 2
+h(x) = h₀# * (1 - 1 / 2 * cos(x))
+dh(x) = 0.0#h₀ / 2 * sin(x)
+α(x) = 1 / 3 * dh(x) * h(x)
+f = TopHatFilter(h)
 
 
 ## Time
@@ -48,9 +44,15 @@ plot!([x[1], x[end]], [Δx / 2, Δx / 2], label = "Δx/2")
 ## Get matrices
 C = advection_matrix(domain, n)
 D = diffusion_matrix(domain, n)
-W = filter_matrix(filter, domain, n)
-R = inverse_filter_matrix(filter, domain, n)
+# W = filter_matrix(f, domain, n)
+# R = inverse_filter_matrix(f, domain, n)
+W = filter_matrix_meshwidth(f, domain, n)
+R = inverse_filter_matrix_meshwidth(f, domain, n)
 A = spdiagm(α.(x))
+
+## Inspect matrices
+spy(W)
+spy(R)
 
 
 ## Exact solutions
@@ -72,7 +74,7 @@ plot!(x, uₕ_allbar, label = "Discretized-then-filtered")
 ## Solve discretized problem
 ∂uₕ∂t(uₕ, p, t) = -C * uₕ
 prob = ODEProblem(∂uₕ∂t, uₕ, (0, T))
-sol = solve(prob, abstol = 1e-6, reltol = 1e-4)
+sol = solve(prob, Tsit5(), abstol = 1e-6, reltol = 1e-4)
 
 plot(x, uₕ, label = "Initial conditions")
 plot!(x, sol(t), label = "Discretized")
@@ -82,7 +84,7 @@ plot!(x, u.(x, t), label = "Exact")
 ## Solve filtered-and-then-discretized problem
 ∂ūₕ∂t(ūₕ, p, t) = (-C + A * D) * ūₕ
 prob_bar = ODEProblem(∂ūₕ∂t, ūₕ, (0, T))
-sol_bar = solve(prob_bar, abstol = 1e-6, reltol = 1e-4)
+sol_bar = solve(prob_bar, Tsit5(), abstol = 1e-6, reltol = 1e-4)
 
 plot(x, uₕ, label = "Initial")
 plot!(x, ūₕ, label = "Initial filtered")
@@ -95,7 +97,7 @@ plot!(x, ū.(x, t), label = "Filtered exact")
 ∂uₕ_allbar∂t(uₕ_allbar, p, t) = -W * (C * (R * uₕ_allbar))
 # ∂uₕ_allbar∂t(uₕ_allbar, p, t) = -W * (C * (W \ uₕ_allbar))
 prob_allbar = ODEProblem(∂uₕ_allbar∂t, W * uₕ, (0, T))
-sol_allbar = solve(prob_allbar, abstol = 1e-6, reltol = 1e-4)
+sol_allbar = solve(prob_allbar, Tsit5(), abstol = 1e-6, reltol = 1e-4)
 
 plot(x, uₕ, label = "Initial")
 plot!(x, uₕ_allbar, label = "Initial discretized-then-filtered")

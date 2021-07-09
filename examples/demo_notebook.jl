@@ -380,7 +380,7 @@ $$\frac{\partial \overline{u}}{\partial{t}} + \frac{\partial \overline{u}}{\part
 
 with initial conditions ``\overline{u}(x, 0) = \overline{u_0}(x)`` and periodic boundary conditions ``\overline{u}(0, t) = \overline{u}(2 \pi, t)``. Applying the discretization scheme after filtering gives
 
-$$\frac{\mathrm{d} \overline{u}_h}{\mathrm{d} t} + C \overline{u}_h = A D \overline{u}.$$
+$$\frac{\mathrm{d} \overline{u}_h}{\mathrm{d} t} + C \overline{u}_h = A D \overline{u}_h.$$
 
 """
 

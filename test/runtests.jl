@@ -1,4 +1,6 @@
 using DiscreteFiltering
+using LinearAlgebra
+using SparseArrays
 using Test
 
 @time @testset "Domains" begin

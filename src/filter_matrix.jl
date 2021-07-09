@@ -1,5 +1,5 @@
 """
-    filter_matrix(f, x[, ε])
+    filter_matrix(f, x, n)
 
 Assemble discrete filtering matrix from a continuous filter `f`.
 """
@@ -17,14 +17,13 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     x = discretize_uniform(domain, n)
 
-    n = length(x)
     h = f.width
     τ(x) = (x - mid) / L
     τ(x, a, b) = (x - (a + b) / 2) / (b - a)
     ϕ = [ChebyshevT([fill(0, i); 1]) for i = 0:degmax]
 
-    W = spzeros(n, n)
-    for i = 1:n
+    W = spzeros(n + 1, n + 1)
+    for i = 1:n+1
         # Point
         xᵢ = x[i]
 
@@ -62,7 +61,6 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
 
     x = discretize_uniform(domain, n)
 
-    n = length(x)
     h = f.width
     τ(x) = (x - mid) / L
     τ(x, a, b) = (x - (a + b) / 2) / (b - a)
@@ -112,16 +110,14 @@ end
 
 function filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
     error("Not implemented")
-    # n = length(x)
     # G = f.kernel
-    # W = spzeros(n, n)
+    # W = spzeros(n + 1, n + 1)
     # W
 end
 
 
 function filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n)
     error("Not implemented")
-    # n = length(x)
     # G = f.kernel
     # W = spzeros(n, n)
     # W

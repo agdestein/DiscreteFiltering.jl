@@ -3,7 +3,7 @@
 
 Approximate inverse of discrete filtering matrix, given filter `f`.
 """
-function inverse_filter_matrix(::Filter, ::Domain, n) 
+function inverse_filter_matrix(::Filter, ::Domain, n)
     error("Not implemented")
 end
 
@@ -14,12 +14,11 @@ function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     x = discretize_uniform(domain, n)
 
-    n = length(x)
     h = f.width
-    R = spzeros(n, n)
+    R = spzeros(n + 1, n + 1)
 
     # Get reconstruction weights for each point
-    for i = 1:n
+    for i = 1:n+1
         # Point
         xᵢ = x[i]
 
@@ -62,7 +61,6 @@ function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
 
     x = discretize_uniform(domain, n)
 
-    n = length(x)
     h = f.width
     R = spzeros(n, n)
 
@@ -108,7 +106,6 @@ end
 
 function inverse_filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
     error("Not implemented")
-    # n = length(x)
     # G = f.kernel
     # R = spzeros(n + 1, n + 1)
     # R
@@ -117,7 +114,6 @@ end
 
 function inverse_filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n)
     error("Not implemented")
-    # n = length(x)
     # G = f.kernel
     # R = spzeros(n, n)
     # R

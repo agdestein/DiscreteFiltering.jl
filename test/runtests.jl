@@ -2,17 +2,17 @@ using DiscreteFiltering
 using Test
 
 @time @testset "Domains" begin
-    include("test_Domain.jl")
+    include("domain.jl")
 end
 
 @time @testset "Filters" begin
-    include("test_TopHatFilter.jl")
-    include("test_ConvolutionalFilter.jl")
+    include("TopHatFilter.jl")
+    include("ConvolutionalFilter.jl")
 end
 
 @time @testset "Matrix assembly" begin
-    include("test_advection_matrix.jl")
-    include("test_diffusion_matrix.jl")
-    include("test_filter_matrix.jl")
-    include("test_inverse_filter_matrix.jl")
+    include("advection_matrix.jl")
+    include("diffusion_matrix.jl")
+    include("filter_matrix.jl")
+    include("inverse_filter_matrix.jl")
 end

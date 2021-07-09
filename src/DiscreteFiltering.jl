@@ -8,10 +8,10 @@ using SparseArrays
 using NonNegLeastSquares
 
 # Domain
-include("Domain.jl")
+include("domain.jl")
 
 # Filter
-include("Filter.jl")
+include("filter.jl")
 
 # Matrix assembly
 include("advection_matrix.jl")

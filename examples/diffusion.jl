@@ -1,5 +1,5 @@
 using DiscreteFiltering
-using OrdinaryDiffEq
+using OrdinaryDiffEq: ODEProblem, solve, QNDF
 using LinearAlgebra
 using Plots
 using SparseArrays
@@ -14,7 +14,7 @@ domain = ClosedIntervalDomain(a, b)
 
 ## Discretization
 n = 200
-x = discretize_uniform(domain, n)
+x = discretize(domain, n)
 Δx = (b - a) / n
 
 

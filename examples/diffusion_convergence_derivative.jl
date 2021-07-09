@@ -1,5 +1,5 @@
 using DiscreteFiltering
-using OrdinaryDiffEq
+using OrdinaryDiffEq: ODEProblem, ODEFunction, solve, QNDF
 using LinearAlgebra
 using Plots
 using SparseArrays
@@ -69,7 +69,7 @@ err_allbar = zeros(length(N))
     println("Solving for n = $n")
 
     ## Discretization
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
     Δx = (b - a) / n
 
     ## Filter

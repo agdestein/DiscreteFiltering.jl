@@ -12,7 +12,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     degmax = 30
 
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
 
     h = f.width
     R = spzeros(n + 1, n + 1)
@@ -59,7 +59,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
 
     degmax = 30
 
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
 
     h = f.width
     R = spzeros(n, n)
@@ -123,7 +123,7 @@ end
 function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
     Δx = x[2] - x[1]
     h = f.width
     h₀ = h(x[1])
@@ -160,7 +160,7 @@ end
 function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
     Δx = x[2] - x[1]
     h = f.width
     h₀ = h(x[1])

@@ -22,7 +22,7 @@ include("inverse_filter_matrix.jl")
 export advection_matrix,
     ClosedIntervalDomain,
     diffusion_matrix,
-    discretize_uniform,
+    discretize,
     filter_matrix,
     filter_matrix_meshwidth,
     inverse_filter_matrix,

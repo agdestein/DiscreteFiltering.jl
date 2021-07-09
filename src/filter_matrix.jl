@@ -15,7 +15,7 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
 
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
 
     h = f.width
     τ(x) = (x - mid) / L
@@ -59,7 +59,7 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
 
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
 
     h = f.width
     τ(x) = (x - mid) / L
@@ -127,7 +127,7 @@ end
 function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
     Δx = x[2] - x[1]
     h = f.width
     h₀ = h(x[1])
@@ -164,7 +164,7 @@ end
 function filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    x = discretize_uniform(domain, n)
+    x = discretize(domain, n)
     Δx = x[2] - x[1]
     h = f.width
     h₀ = h(x[1])

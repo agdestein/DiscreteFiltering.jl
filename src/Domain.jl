@@ -41,16 +41,16 @@ end
 
 Discretize domain.
 """
-function discretize_uniform(::Domain)
+function discretize(::Domain)
     error("Not implemented")
 end
 
 
-function discretize_uniform(domain::ClosedIntervalDomain, n)
+function discretize(domain::ClosedIntervalDomain, n)
     LinRange(domain.left, domain.right, n + 1)
 end
 
 
-function discretize_uniform(domain::PeriodicIntervalDomain, n)
+function discretize(domain::PeriodicIntervalDomain, n)
     LinRange(domain.left + (domain.right - domain.left) / n, domain.right, n)
 end

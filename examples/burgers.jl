@@ -1,5 +1,5 @@
 using DiscreteFiltering
-using OrdinaryDiffEq
+using OrdinaryDiffEq: ODEProblem, solve, QNDF
 using LinearAlgebra
 using Plots
 using SparseArrays
@@ -22,7 +22,7 @@ domain = PeriodicIntervalDomain(a, b)
 
 ## Discretization
 n = 500
-x = discretize_uniform(domain, n)
+x = discretize(domain, n)
 Δx = (b - a) / n
 
 Δx^2 / maximum(abs.(α.(x)))

@@ -1,5 +1,5 @@
 using DiscreteFiltering
-using OrdinaryDiffEq
+using OrdinaryDiffEq: ODEProblem, solve, Tsit5
 using LinearAlgebra
 using Plots
 using SparseArrays
@@ -14,7 +14,7 @@ domain = PeriodicIntervalDomain(a, b)
 
 ## Discretization
 n = 500
-x = discretize_uniform(domain, n)
+x = discretize(domain, n)
 Δx = (b - a) / n
 
 
@@ -72,8 +72,8 @@ plot!(x, uₕ_allbar, label = "Discretized-then-filtered")
 
 
 ## Solve discretized problem
-∂uₕ∂t(uₕ, p, t) = -C * uₕ
-prob = ODEProblem(∂uₕ∂t, uₕ, (0, T))
+duₕ(uₕ, p, t) = -C * uₕ
+prob = ODEProblem(duₕ, uₕ, (0, T))
 sol = solve(prob, Tsit5(), abstol = 1e-6, reltol = 1e-4)
 
 plot(x, uₕ, label = "Initial conditions")
@@ -82,8 +82,8 @@ plot!(x, u.(x, t), label = "Exact")
 
 
 ## Solve filtered-and-then-discretized problem
-∂ūₕ∂t(ūₕ, p, t) = (-C + A * D) * ūₕ
-prob_bar = ODEProblem(∂ūₕ∂t, ūₕ, (0, T))
+dūₕ(ūₕ, p, t) = (-C + A * D) * ūₕ
+prob_bar = ODEProblem(dūₕ, ūₕ, (0, T))
 sol_bar = solve(prob_bar, Tsit5(), abstol = 1e-6, reltol = 1e-4)
 
 plot(x, uₕ, label = "Initial")
@@ -94,9 +94,9 @@ plot!(x, ū.(x, t), label = "Filtered exact")
 
 
 ## Solve discretized-and-then-filtered problem
-∂uₕ_allbar∂t(uₕ_allbar, p, t) = -W * (C * (R * uₕ_allbar))
-# ∂uₕ_allbar∂t(uₕ_allbar, p, t) = -W * (C * (W \ uₕ_allbar))
-prob_allbar = ODEProblem(∂uₕ_allbar∂t, W * uₕ, (0, T))
+duₕ_allbar(uₕ_allbar, p, t) = -W * (C * (R * uₕ_allbar))
+# duₕ_allbar(uₕ_allbar, p, t) = -W * (C * (W \ uₕ_allbar))
+prob_allbar = ODEProblem(duₕ_allbar, W * uₕ, (0, T))
 sol_allbar = solve(prob_allbar, Tsit5(), abstol = 1e-6, reltol = 1e-4)
 
 plot(x, uₕ, label = "Initial")

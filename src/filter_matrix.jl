@@ -1,5 +1,5 @@
 """
-    filter_matrix(f, x, n)
+    filter_matrix(f, domain, n)
 
 Assemble discrete filtering matrix from a continuous filter `f`.
 """
@@ -124,6 +124,12 @@ function filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n
 end
 
 
+"""
+    filter_matrix_meshwidth(f, domain, n)
+
+Assemble discrete filtering matrix from a continuous filter `f` width constant width
+\$h(x) = \\Delta x / 2\$.
+"""
 function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2

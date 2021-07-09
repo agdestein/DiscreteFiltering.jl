@@ -120,6 +120,12 @@ function inverse_filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalD
 end
 
 
+"""
+    inverse_filter_matrix_meshwidth(f, domain, n)
+
+Assemble inverse discrete filtering matrix from a continuous filter `f` width constant width
+\$h(x) = \\Delta x / 2\$.
+"""
 function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2

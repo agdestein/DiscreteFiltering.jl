@@ -37,11 +37,11 @@ end
 
 
 """
-    discretize(domain)
+    discretize(domain, n)
 
-Discretize domain.
+Discretize domain with `n` points.
 """
-function discretize(::Domain)
+function discretize(::Domain, n)
     error("Not implemented")
 end
 

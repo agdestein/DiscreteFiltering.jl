@@ -140,7 +140,7 @@ function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicInterv
     # stencil = [3 / 640, -29 / 480, 1067 / 960, -29 / 480, 3 / 640]
 
     # Construct banded matrix
-    diags = [i => fill(s, n + 1 - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    diags = [i => fill(s, n - abs(i)) for (i, s) ∈ zip(inds, stencil)]
     R = spdiagm(diags...)
 
     # Periodic extension of three point stencil

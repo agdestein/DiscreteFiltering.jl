@@ -144,7 +144,7 @@ function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain
     # stencil = [-6 / 2033, 77 / 1440, 863 / 960, 77 / 1440, -6 / 2033]
 
     # Construct banded matrix
-    diags = [i => fill(s, n + 1 - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    diags = [i => fill(s, n - abs(i)) for (i, s) ∈ zip(inds, stencil)]
     W = spdiagm(diags...)
 
     # Periodic extension of three point stencil  

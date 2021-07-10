@@ -21,6 +21,7 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 Documenter = "0.26, 0.27"
 Intervals = "1"
 NonNegLeastSquares = "0.4"
+OrdinaryDiffEq = "5"
 Polynomials = "2"
 julia = "1"
 

@@ -8,8 +8,7 @@ using Test
 end
 
 @testset "Filters" begin
-    include("TopHatFilter.jl")
-    include("ConvolutionalFilter.jl")
+    include("filter.jl")
 end
 
 @testset "Matrix assembly" begin

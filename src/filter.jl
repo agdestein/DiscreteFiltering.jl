@@ -9,8 +9,8 @@ abstract type Filter end
 
 Top hat filter, parameterized by a variable filter width.
 """
-struct TopHatFilter <: Filter
-    width::Function
+struct TopHatFilter{F<:Function} <: Filter
+    width::F
 end
 
 
@@ -19,6 +19,6 @@ end
 
 Convolutional filter, parameterized by a filter kernel.
 """
-struct ConvolutionalFilter <: Filter
-    kernel::Function
+struct ConvolutionalFilter{F<:Function} <: Filter
+    kernel::F
 end

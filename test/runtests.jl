@@ -17,3 +17,9 @@ end
     include("matrices/filter_matrix.jl")
     include("matrices/inverse_filter_matrix.jl")
 end
+
+@testset "Equations" begin
+    include("equations/solve_diffusion.jl")
+    include("equations/solve_advection.jl")
+    include("equations/solve_burgers.jl")
+end

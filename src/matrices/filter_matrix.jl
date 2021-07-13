@@ -26,8 +26,12 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     mid = (domain.left + domain.right) / 2
 
     x = discretize(domain, n)
-
     h = f.width
+
+    if all(isequal(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
+        return filter_matrix_meshwidth(f, domain, n)
+    end
+
     τ(x) = (x - mid) / L
     τ(x, a, b) = (x - (a + b) / 2) / (b - a)
     ϕ = [ChebyshevT([fill(0, i); 1]) for i = 0:degmax]
@@ -70,8 +74,12 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     mid = (domain.left + domain.right) / 2
 
     x = discretize(domain, n)
-
     h = f.width
+
+    if all(isequal(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
+        return filter_matrix_meshwidth(f, domain, n)
+    end
+
     τ(x) = (x - mid) / L
     τ(x, a, b) = (x - (a + b) / 2) / (b - a)
     degmax = 100

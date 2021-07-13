@@ -23,8 +23,12 @@ function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     degmax = 30
 
     x = discretize(domain, n)
-
     h = f.width
+
+    if all(isequal(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
+        return inverse_filter_matrix_meshwidth(f, domain, n)
+    end
+
     R = spzeros(n + 1, n + 1)
 
     # Get reconstruction weights for each point
@@ -70,8 +74,12 @@ function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
     degmax = 30
 
     x = discretize(domain, n)
-
     h = f.width
+
+    if all(isequal(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
+        return inverse_filter_matrix_meshwidth(f, domain, n)
+    end
+
     R = spzeros(n, n)
 
     # Get reconstruction weights for each point

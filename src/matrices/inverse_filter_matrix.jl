@@ -8,6 +8,16 @@ function inverse_filter_matrix(::Filter, ::Domain, n)
 end
 
 
+function inverse_filter_matrix(::IdentityFilter, ::ClosedIntervalDomain, n)
+    sparse(I, n + 1, n + 1)
+end
+
+
+function inverse_filter_matrix(::IdentityFilter, ::PeriodicIntervalDomain, n)
+    sparse(I, n, n)
+end
+
+
 function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     degmax = 30

@@ -25,7 +25,7 @@ include("equations/solve_diffusion.jl")
 include("equations/solve_burgers.jl")
 
 export ClosedIntervalDomain, discretize, PeriodicIntervalDomain
-export TopHatFilter, ConvolutionalFilter
+export IdentityFilter, TopHatFilter, ConvolutionalFilter
 export advection_matrix,
     diffusion_matrix,
     filter_matrix,

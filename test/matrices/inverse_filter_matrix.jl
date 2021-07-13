@@ -11,6 +11,25 @@
     unknown_domain = UnknownDomain()
 
 
+    ## Identity filter
+    f = IdentityFilter()
+
+    # ClosedIntervalDomain
+    R = inverse_filter_matrix(f, closed_interval, n)
+    @test R isa SparseMatrixCSC
+    @test size(R) == (n + 1, n + 1)
+    @test all(sum(R, dims = 2) .≈ 1)
+
+    # PeriodicIntervalDomain
+    R = inverse_filter_matrix(f, periodic_interval, n)
+    @test R isa SparseMatrixCSC
+    @test size(R) == (n, n)
+    @test all(sum(R, dims = 2) .≈ 1)
+
+    # Unknown domain
+    @test_throws Exception inverse_filter_matrix(f, unknown_domain, n)
+
+
     ## Top hat filter
     h₀ = 0.05
     h = x -> h₀ * (1 - 1 / 2 * cos(x))

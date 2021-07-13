@@ -8,16 +8,16 @@ using SparseArrays
 using NonNegLeastSquares
 
 # Domain
-include("domain.jl")
+include("structures/domain.jl")
 
 # Filter
-include("filter.jl")
+include("structures/filter.jl")
 
 # Matrix assembly
-include("advection_matrix.jl")
-include("diffusion_matrix.jl")
-include("filter_matrix.jl")
-include("inverse_filter_matrix.jl")
+include("matrices/advection_matrix.jl")
+include("matrices/diffusion_matrix.jl")
+include("matrices/filter_matrix.jl")
+include("matrices/inverse_filter_matrix.jl")
 
 export advection_matrix,
     ClosedIntervalDomain,

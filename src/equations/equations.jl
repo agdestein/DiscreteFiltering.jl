@@ -9,12 +9,10 @@ abstract type Equation end
 
 Filtered advection equation.
 """
-struct AdvectionEquation{D<:Domain,F<:Filter} <: Equation
+@with_kw struct AdvectionEquation{D<:Domain,F<:Filter} <: Equation
     domain::D
-    filter::F
+    filter::F = IdentityFilter()
 end
-AdvectionEquation(domain::D, filter::F = IdentityFilter()) where {D<:Domain,F<:Filter} =
-    AdvectionEquation{D,F}(domain, filter)
 
 
 """
@@ -28,29 +26,21 @@ AdvectionEquation(domain::D, filter::F = IdentityFilter()) where {D<:Domain,F<:F
 
 Filtered diffusion equation.
 """
-struct DiffusionEquation{D<:Domain,F<:Filter} <: Equation
+@with_kw struct DiffusionEquation{D<:Domain,F<:Filter} <: Equation
     domain::D
-    filter::F
-    f::Union{Nothing,Function}
-    g_a::Union{Nothing,Function}
-    g_b::Union{Nothing,Function}
+    filter::F = IdentityFilter()
+    f::Union{Nothing,Function} = nothing
+    g_a::Union{Nothing,Function} = nothing
+    g_b::Union{Nothing,Function} = nothing
 end
-DiffusionEquation(
-    domain::D,
-    filter::F = IdentityFilter();
-    f = nothing,
-    g_a = nothing,
-    g_b = nothing,
-) where {D<:Domain,F<:Filter} = DiffusionEquation{D,F}(domain, filter, f, g_a, g_b)
+
 
 """
     BurgersEquation(domain, filter = IdentityFilter())
 
 Filtered Burgers equation.
 """
-struct BurgersEquation{D<:Domain,F<:Filter} <: Equation
+@with_kw struct BurgersEquation{D<:Domain,F<:Filter} <: Equation
     domain::D
-    filter::F
+    filter::F = IdentityFilter()
 end
-BurgersEquation(domain::D, filter::F = IdentityFilter()) where {D<:Domain,F<:Filter} =
-    BurgersEquation{D,F}(domain, filter)

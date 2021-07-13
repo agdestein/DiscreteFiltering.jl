@@ -24,8 +24,8 @@ include("equations/solve_advection.jl")
 include("equations/solve_diffusion.jl")
 include("equations/solve_burgers.jl")
 
-export domain, ClosedIntervalDomain, discretize, PeriodicIntervalDomain
-export filter, TopHatFilter, ConvolutionalFilter
+export ClosedIntervalDomain, discretize, PeriodicIntervalDomain
+export TopHatFilter, ConvolutionalFilter
 export advection_matrix,
     diffusion_matrix,
     filter_matrix,

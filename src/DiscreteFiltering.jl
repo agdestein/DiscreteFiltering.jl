@@ -3,7 +3,7 @@ module DiscreteFiltering
 
 using Intervals
 using LinearAlgebra
-using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF
+using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, OrdinaryDiffEq
 using Parameters
 using Polynomials
 using SparseArrays

@@ -1,3 +1,3 @@
 @testset "solve_diffusion.jl" begin
-    @test_broken solve_diffusion()
+    @test_broken solve()
 end

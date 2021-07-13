@@ -1,3 +1,3 @@
 @testset "solve_burgers.jl" begin
-    @test_broken solve_burgers()
+    @test_broken solve()
 end

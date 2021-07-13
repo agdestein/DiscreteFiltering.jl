@@ -24,7 +24,7 @@
     W = filter_matrix(f, periodic_interval, n)
     @test W isa SparseMatrixCSC
     @test size(W) == (n, n)
-    @test_broken all(sum(W, dims = 2) .≈ 1)
+    @test all(sum(W, dims = 2) .≈ 1)
 
     # Unknown domain
     @test_throws Exception filter_matrix(f, unknown_domain, n)

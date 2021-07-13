@@ -4,6 +4,7 @@ function solve(
     tlist,
     n;
     method = "filterfirst",
+    solver = QNDF(),
     abstol = 1e-4,
     reltol = 1e-3,
 )

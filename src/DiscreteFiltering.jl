@@ -21,9 +21,7 @@ include("matrices/filter_matrix.jl")
 include("matrices/inverse_filter_matrix.jl")
 
 # Equations
-include("equations/solve_advection.jl")
-include("equations/solve_diffusion.jl")
-include("equations/solve_burgers.jl")
+include("equations/equations.jl")
 
 export ClosedIntervalDomain, discretize, PeriodicIntervalDomain
 export IdentityFilter, TopHatFilter, ConvolutionalFilter, gaussian
@@ -33,6 +31,6 @@ export advection_matrix,
     filter_matrix_meshwidth,
     inverse_filter_matrix,
     inverse_filter_matrix_meshwidth
-export solve_advection, solve_diffusion, solve_burgers
+export AdvectionEquation, DiffusionEquation, BurgersEquation
 
 end

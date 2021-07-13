@@ -5,7 +5,7 @@ abstract type Equation end
 
 
 """
-    AdvectionEquation(domain, filter = IdentityFilter)
+    AdvectionEquation(domain, filter = IdentityFilter())
 
 Filtered advection equation.
 """
@@ -18,7 +18,7 @@ end
 """
     DiffusionEquation(
         domain,
-        filter = IdentityFilter();
+        filter = IdentityFilter(),
         f = nothing,
         g_a = nothing,
         g_b = nothing

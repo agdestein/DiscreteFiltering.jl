@@ -17,8 +17,8 @@ struct IdentityFilter <: Filter end
 
 Top hat filter, parameterized by a variable filter width.
 """
-struct TopHatFilter{F<:Function} <: Filter
-    width::F
+struct TopHatFilter <: Filter
+    width::Function
 end
 
 
@@ -27,6 +27,6 @@ end
 
 Convolutional filter, parameterized by a filter kernel.
 """
-struct ConvolutionalFilter{F<:Function} <: Filter
-    kernel::F
+struct ConvolutionalFilter <: Filter
+    kernel::Function
 end

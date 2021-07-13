@@ -19,16 +19,13 @@ include("matrices/diffusion_matrix.jl")
 include("matrices/filter_matrix.jl")
 include("matrices/inverse_filter_matrix.jl")
 
+export domain, ClosedIntervalDomain, discretize, PeriodicIntervalDomain
+export filter, TopHatFilter, ConvolutionalFilter
 export advection_matrix,
-    ClosedIntervalDomain,
     diffusion_matrix,
-    discretize,
     filter_matrix,
     filter_matrix_meshwidth,
     inverse_filter_matrix,
-    inverse_filter_matrix_meshwidth,
-    PeriodicIntervalDomain,
-    TopHatFilter,
-    ConvolutionalFilter
+    inverse_filter_matrix_meshwidth
 
 end

@@ -24,13 +24,13 @@
     f = (x, t) -> x + t
     g_a = t -> t
     g_b = t -> 0.0
-    eq = DiffusionEquation(closed, identity_filter; f, g_a, g_b)
+    eq = DiffusionEquation(closed, identity_filter, f, g_a, g_b)
     @test eq isa DiffusionEquation{ClosedIntervalDomain{typeof(a)},IdentityFilter}
-    eq = DiffusionEquation(closed, top_hat_filter; f, g_a, g_b)
+    eq = DiffusionEquation(closed, top_hat_filter, f, g_a, g_b)
     @test eq isa DiffusionEquation{ClosedIntervalDomain{typeof(a)},TopHatFilter}
-    eq = DiffusionEquation(closed, convolutional_filter; f, g_a, g_b)
+    eq = DiffusionEquation(closed, convolutional_filter, f, g_a, g_b)
     @test eq isa DiffusionEquation{ClosedIntervalDomain{typeof(a)},ConvolutionalFilter}
-    eq = DiffusionEquation(periodic, identity_filter; f, g_a, g_b)
+    eq = DiffusionEquation(periodic, identity_filter, f, g_a, g_b)
     @test eq isa DiffusionEquation{PeriodicIntervalDomain{typeof(a)},IdentityFilter}
 
     # BurgersEquation

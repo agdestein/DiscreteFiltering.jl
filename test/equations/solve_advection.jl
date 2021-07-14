@@ -21,7 +21,7 @@
 
         # Discretization
         x = discretize(domain, n)
-        Δx = (b - a) / n
+        Δx = (domain.right - domain.left) / n
 
         # Filter
         h(x) = Δx / 2

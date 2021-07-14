@@ -1,16 +1,14 @@
 using DiscreteFiltering
-using OrdinaryDiffEq: DiffEqArrayOperator, ODEProblem, solve, LinearExponential
-using LinearAlgebra
+using LinearAlgebra: norm
 using Plots
-using SparseArrays
 
 
 ## Parameters
+
 # Domain
 a = 0.0
 b = 2π
 domain = PeriodicIntervalDomain(a, b)
-# domain = ClosedIntervalDomain(a, b)
 
 # Time
 T = 1.0
@@ -22,11 +20,10 @@ u_int(x, t) = -cos(x - t) + 0.6 / 5 * sin(5(x - t)) - 0.04 / 20 * cos(20(x - 1 -
 # Ode solver tolerances
 # tols = (;)
 # tols = (; abstol = 1e-6, reltol = 1e-4)
-# tols = (; abstol = 1e-7, reltol = 1e-5)
-subspacedim = 200
+tols = (; abstol = 1e-7, reltol = 1e-5)
 
 # Number of mesh points
-N = floor.(Int, 10 .^ LinRange(1, 5, 50))
+N = floor.(Int, 10 .^ LinRange(1, 4, 20))
 # N = [100]
 
 # Errors
@@ -39,56 +36,51 @@ err_allbar = zeros(length(N))
 
     println("Solving for n = $n")
 
-    ## Discretization
+    # Discretization
     x = discretize(domain, n)
     Δx = (b - a) / n
 
-    ## Filter
-    h₀ = Δx
-    h(x) = h₀ / 2
-    dh(x) = 0.0
+    # Filter
+    h(x) = Δx / 2
     # h(x) = h₀ * (1 - 1 / 2 * cos(x))
-    # dh(x) = h₀ / 2 * sin(x)
-    α(x) = 1 / 3 * dh(x) * h(x)
     f = TopHatFilter(h)
 
-    ## Get matrices
-    C = advection_matrix(domain, n)
-    D = diffusion_matrix(domain, n)
-    # W = filter_matrix(f, domain, n)
-    # R = inverse_filter_matrix(f, domain, n)
-    W = filter_matrix_meshwidth(f, domain, n)
-    R = inverse_filter_matrix_meshwidth(f, domain, n)
-    A = spdiagm(α.(x))
-
-    ## Exact filtered solution
+    # Exact filtered solution
     ū(x, t) = 1 / 2h(x) * (u_int(x + h(x), t) - u_int(x - h(x), t))
 
-    ## Discrete initial conditions
-    uₕ = u.(x, 0.0)
-    ūₕ = ū.(x, 0.0)
-    uₕ_allbar = W * uₕ
+    # Equations
+    equation = AdvectionEquation(domain, IdentityFilter())
+    equation_filtered = AdvectionEquation(domain, TopHatFilter(h))
 
-    ## Solve discretized problem
-    J = DiffEqArrayOperator(-C)
-    prob = ODEProblem(J, uₕ, (0, T))
-    sol = solve(prob, LinearExponential(krylov = :simple, m = subspacedim))
+    # Solve discretized problem
+    sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
 
-    ## Solve filtered-and-then-discretized problem
-    J_bar = DiffEqArrayOperator(-C + A * D)
-    prob_bar = ODEProblem(J_bar, ūₕ, (0, T))
-    sol_bar = solve(prob_bar, LinearExponential(krylov = :simple, m = subspacedim))
+    # Solve filtered-then-discretized problem
+    sol_bar = solve(
+        equation_filtered,
+        x -> u(x, 0.0),
+        (0.0, T),
+        n;
+        method = "filterfirst",
+        tols...,
+    )
 
-    ## Solve discretized-and-then-filtered problem
-    J_allbar = DiffEqArrayOperator(-W * C * R)
-    prob_allbar = ODEProblem(J_allbar, W * uₕ, (0, T))
-    sol_allbar = solve(prob_allbar, LinearExponential(krylov = :simple, m = subspacedim))
+    # Solve discretized-then-filtered problem
+    sol_allbar = solve(
+        equation_filtered,
+        x -> u(x, 0.0),
+        (0.0, T),
+        n;
+        method = "discretizefirst",
+        tols...,
+    )
 
     ## Relative error
     u_exact = u.(x, T)
+    ū_exact = ū.(x, T)
     err[i] = norm(sol(T) - u_exact) / norm(u_exact)
-    err_bar[i] = norm(sol_bar(T) - u_exact) / norm(u_exact)
-    err_allbar[i] = norm(sol_allbar(T) - u_exact) / norm(u_exact)
+    err_bar[i] = norm(sol_bar(T) - ū_exact) / norm(ū_exact)
+    err_allbar[i] = norm(sol_allbar(T) - ū_exact) / norm(ū_exact)
 end
 
 

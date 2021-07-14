@@ -1,5 +1,4 @@
 using DiscreteFiltering
-using OrdinaryDiffEq: ODEProblem, solve, QNDF
 using LinearAlgebra
 using Plots
 using SparseArrays
@@ -23,12 +22,24 @@ h₀ = Δx / 2
 h(x) = h₀ # * (1 - 1 / 2 * cos(x))
 dh(x) = 0.0 # h₀ / 2 * sin(x)
 α(x) = 1 / 3 * dh(x) * h(x)
-fil = TopHatFilter(h)
+filter = TopHatFilter(h)
+
+
+## Equations
+f = (x, t) -> 0.0
+g_a = t -> 0.0
+g_b = t -> 0.0
+equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
+equation_filtered = DiffusionEquation(domain, filter, f, g_a, g_b)
 
 
 ## Time
 T = 0.04
 t = T
+
+
+# ODE solver tolerances
+tols = (; abstol = 1e-6, reltol = 1e-4)
 
 
 ## Plot filter
@@ -39,41 +50,6 @@ ylims!((0, ylims()[2]))
 ## Plot α and step size
 plot(x, abs.(α.(x)), label = "|α(x)|")
 plot!([x[1], x[end]], [Δx / 2, Δx / 2], label = "Δx/2")
-
-
-## Get matrices
-C = advection_matrix(domain, n)
-D = diffusion_matrix(domain, n)
-# W = filter_matrix(fil, domain, n)
-# R = inverse_filter_matrix(fil, domain, n)
-W = filter_matrix_meshwidth(fil, domain, n)
-R = inverse_filter_matrix_meshwidth(fil, domain, n)
-A = spdiagm(α.(x))
-
-
-## Inspect matrices
-spy(W)
-spy(R)
-
-## Plot weights at different thicknesses
-pl = plot()
-for i in (n ÷ 10) * [0, 1, 2, 3, 4, 5] .+ 1
-    a = W[i, :]
-    inds = a.nzind
-    vals = a.nzval
-    ishift = inds .- i
-    inds1 = ishift .≤ n ÷ 2
-    inds2 = .!inds1
-    ishift[inds2] .-= n
-    plot!(pl, [ishift[inds2]; ishift[inds1]], [vals[inds2]; vals[inds1]], label = "i = $i")
-    # scatter!(
-    #     pl,
-    #     [ishift[inds2]; ishift[inds1]],
-    #     [vals[inds2]; vals[inds1]],
-    #     label = "i = $i",
-    # )
-end
-display(pl)
 
 
 ## Exact solutions
@@ -93,29 +69,37 @@ end
 ## Discrete initial conditions
 uₕ = u₀.(x)
 ūₕ = ū₀.(x)
-uₕ_allbar = W * uₕ
 
-plot(x, uₕ, label = "Discretized")
-plot!(x, ūₕ, label = "Filtered-then-discretized")
-plot!(x, uₕ_allbar, label = "Discretized-then-filtered")
+plot(x, uₕ, label = "Unfiltered")
+plot!(x, ūₕ, label = "Filtered")
 title!("Initial conditions")
 
 
 ## Solve discretized problem
-∂uₕ∂t(uₕ, p, t) = D * uₕ
-prob = ODEProblem(∂uₕ∂t, uₕ, (0, T))
-sol = solve(prob, QNDF(), abstol = 1e-6, reltol = 1e-4)
-
+sol = solve(
+    equation,
+    u₀,
+    (0.0, T),
+    n;
+    method = "discretizefirst",
+    boundary_conditions = "derivative",
+    tols...,
+)
 plot(x, uₕ, label = "Initial conditions")
 plot!(x, sol(t), label = "Discretized")
 title!("Solution")
 
 
 ## Solve filtered-and-then-discretized problem
-∂ūₕ∂t(ūₕ, p, t) = (D + A * D) * ūₕ
-prob_bar = ODEProblem(∂ūₕ∂t, ūₕ, (0, T))
-sol_bar = solve(prob_bar, QNDF(), abstol = 1e-6, reltol = 1e-4)
-
+sol_bar = solve(
+    equation_filtered,
+    u₀,
+    (0.0, T),
+    n;
+    method = "filterfirst",
+    boundary_conditions = "derivative",
+    tols...,
+)
 plot(x, uₕ, label = "Initial")
 plot!(x, ūₕ, label = "Initial filtered")
 plot!(x, sol_bar(t), label = "Filtered-then-discretized")
@@ -123,13 +107,18 @@ title!("Solution")
 
 
 ## Solve discretized-and-then-filtered problem
-∂uₕ_allbar∂t(uₕ_allbar, p, t) = W * (D * (R * uₕ_allbar))
-# ∂uₕ_allbar∂t(uₕ_allbar, p, t) = W * (D * (W \ uₕ_allbar))
-prob_allbar = ODEProblem(∂uₕ_allbar∂t, W * uₕ, (0, T))
-sol_allbar = solve(prob_allbar, QNDF(), abstol = 1e-6, reltol = 1e-4)
+sol_allbar = solve(
+    equation_filtered,
+    u₀,
+    (0.0, T),
+    n;
+    method = "discretizefirst",
+    boundary_conditions = "derivative",
+    tols...,
+)
 
 plot(x, uₕ, label = "Initial")
-plot!(x, uₕ_allbar, label = "Initial discretized-then-filtered")
+plot!(x, ūₕ, label = "Initial discretized-then-filtered")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
 title!("Solution")
 

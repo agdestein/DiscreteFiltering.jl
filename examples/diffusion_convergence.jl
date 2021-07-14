@@ -62,22 +62,26 @@ err_bar = zeros(length(N))
 
     println("Solving for n = $n")
 
-    ## Discretization
+    # Discretization
     Δx = (b - a) / n
     h(x) = Δx / 2
     x = discretize(domain, n)
 
+    # Equations
     equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
     equation_filtered = DiffusionEquation(domain, TopHatFilter(h), f, g_a, g_b)
 
-    ## Exact filtered solution
+    # Exact filtered solution
     ū(x, t) = begin
         α = max(a, x - h(x))
         β = min(b, x + h(x))
         1 / (β - α) * (u_int(β, t) - u_int(α, t))
     end
 
+    # Solve discretized problem
     sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
+
+    # Solve discretized-then-filtered problem
     sol_bar = solve(
         equation_filtered,
         x -> u(x, 0.0),
@@ -88,7 +92,7 @@ err_bar = zeros(length(N))
         tols...,
     )
 
-    ## Relative error
+    # Relative error
     u_exact = u.(x, T)
     ū_exact = ū.(x, T)
     err[i] = norm(sol(T) - u_exact) / norm(u_exact)

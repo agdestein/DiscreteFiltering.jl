@@ -1,5 +1,5 @@
 """
-    diffusion_matrix(n)
+    diffusion_matrix(domain, n)
 
 Assemble discrete diffusion matrix.
 """

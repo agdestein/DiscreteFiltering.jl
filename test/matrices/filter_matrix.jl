@@ -52,8 +52,7 @@
 
 
     ## Convolutional filter
-    G(σ², x) = 1 / √(2πσ²) * exp(-x^2 / 2σ²)
-    G(x) = G(h₀^2, x)
+    G = gaussian(h₀^2)
     g = ConvolutionalFilter(G)
 
     # ClosedIntervalDomain

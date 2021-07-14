@@ -20,10 +20,11 @@ u_int(x, t) = -cos(x - t) + 0.6 / 5 * sin(5(x - t)) - 0.04 / 20 * cos(20(x - 1 -
 # Ode solver tolerances
 # tols = (;)
 # tols = (; abstol = 1e-6, reltol = 1e-4)
-tols = (; abstol = 1e-7, reltol = 1e-5)
+# tols = (; abstol = 1e-7, reltol = 1e-5)
+subspacedim = 50
 
 # Number of mesh points
-N = floor.(Int, 10 .^ LinRange(1, 4, 20))
+N = floor.(Int, 10 .^ LinRange(1, 5, 20))
 # N = [100]
 
 # Errors
@@ -53,7 +54,14 @@ err_allbar = zeros(length(N))
     equation_filtered = AdvectionEquation(domain, TopHatFilter(h))
 
     # Solve discretized problem
-    sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
+    sol = solve(
+        equation,
+        x -> u(x, 0.0),
+        (0.0, T),
+        n;
+        method = "discretizefirst",
+        subspacedim,
+    )
 
     # Solve filtered-then-discretized problem
     sol_bar = solve(
@@ -62,7 +70,7 @@ err_allbar = zeros(length(N))
         (0.0, T),
         n;
         method = "filterfirst",
-        tols...,
+        subspacedim,
     )
 
     # Solve discretized-then-filtered problem
@@ -72,7 +80,7 @@ err_allbar = zeros(length(N))
         (0.0, T),
         n;
         method = "discretizefirst",
-        tols...,
+        subspacedim,
     )
 
     ## Relative error
@@ -92,6 +100,7 @@ p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :topright)
 plot!(p, N, err, label = "Discretized")
 plot!(p, N, err_bar, label = "Filtered-then-discretized")
 plot!(p, N, err_allbar, label = "Discretized-then-filtered")
+plot!(p, N, 1000N .^ -2, label = "\$100 / n^2\$")
 xlabel!(p, "n")
 title!(p, "Advection equation, \$h(x) = \\Delta x / 2\$")
 display(p)

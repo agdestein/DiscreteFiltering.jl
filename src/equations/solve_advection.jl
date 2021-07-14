@@ -4,9 +4,7 @@ function solve(
     tlist,
     n;
     method = "filterfirst",
-    solver = QNDF(),
-    abstol = 1e-4,
-    reltol = 1e-3,
+    subspacedim = 10,
 ) where {T,F}
 
     @unpack domain, filter = equation
@@ -31,24 +29,15 @@ function solve(
         dh(x) = 0.0
         α(x) = 1 / 3 * dh(x) * h(x)
         A = spdiagm(α.(x))
-        p = (; J = -C + A * D)
-        odefunction =
-            ODEFunction(du!, jac = (J, u, p, t) -> (J .= p.J), jac_prototype = p.J)
-        problem = ODEProblem(odefunction, ūₕ, tlist, p)
-        solution = OrdinaryDiffEq.solve(problem, solver; abstol, reltol)
+        J = DiffEqArrayOperator(-C + A * D)
     elseif method == "discretizefirst"
-        p = (; J = -W * C * R)
-        odefunction = ODEFunction(
-            du!,
-            jac = (J, u, p, t) -> (J .= p.J),
-            jac_prototype = p.J,
-            mass_matrix = W * R,
-        )
-        problem = ODEProblem(odefunction, W * uₕ, tlist, p)
-        solution = OrdinaryDiffEq.solve(problem, solver; abstol, reltol)
+        J = DiffEqArrayOperator(-W * C * R)
     else
         error("Unknown method")
     end
+
+    problem = ODEProblem(J, W * uₕ, tlist)
+    solution = OrdinaryDiffEq.solve(problem, LinearExponential(krylov = :simple, m = subspacedim))
 
     solution
 end

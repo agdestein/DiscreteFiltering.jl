@@ -9,7 +9,7 @@ function solve(
     solver = QNDF(),
     abstol = 1e-4,
     reltol = 1e-3,
-) where {T,F<:Filter}
+) where {T,F}
 
     @unpack domain, filter, f, g_a, g_b = equation
     x = discretize(domain, n)
@@ -54,8 +54,12 @@ function solve(
         J = D
         J[[1, end], :] .= 0
         dropzeros!(D)
-        γ_a = g_a'
-        γ_b = g_b'
+        function derivative(f)
+            df = f'
+            t -> isnothing(df(t)) ? 0.0 : df(t)
+        end
+        γ_a = derivative(g_a)
+        γ_b = derivative(g_b)
     elseif boundary_conditions == "ADBC"
         error("Not implemented")
     else
@@ -65,7 +69,7 @@ function solve(
     if method == "filterfirst"
         error("Not implemented")
         h = filter.width
-        dh = h'
+        dh = derivative(h)
         α(x) = 1 / 3 * dh(x) * h(x)
         A = spdiagm(α.(x))
     elseif method == "discretizefirst"
@@ -104,7 +108,7 @@ function solve(
     solver = QNDF(),
     abstol = 1e-4,
     reltol = 1e-3,
-) where {T,F<:Filter}
+) where {T,F}
 
     @unpack domain, filter = equation
 

@@ -12,7 +12,7 @@
     g_a(t) = t
     g_b(t) = t
 
-    params = (; abstol = 1e-7, reltol = 1e-5)
+    params = (; abstol = 1e-6, reltol = 1e-4)
 
     # Number of mesh points
     N = floor.(Int, 10 .^ LinRange(2.5, 4.0, 4))
@@ -48,7 +48,7 @@
             (0.0, T),
             n;
             method = "discretizefirst",
-            boundary_conditions = "exact",
+            boundary_conditions = "derivative",
             params...,
         )
 
@@ -59,6 +59,7 @@
             (0.0, T),
             n;
             method = "filterfirst",
+            boundary_conditions = "derivative",
             params...,
         )
 
@@ -92,5 +93,45 @@
         # @test err_bar < 1.6 * err_bar_ref * (n_ref / n)^2
         @test err_allbar < 1.6 * err_allbar_ref * (n_ref / n)^2
     end
+
+
+    # Discretization
+    n = 100
+    x = discretize(domain, n)
+    Δx = (domain.right - domain.left) / n
+
+    # Exact filtered solution
+    ū(x, t) = begin
+        α = max(a, x - h(x))
+        β = min(b, x + h(x))
+        1 / (β - α) * (u_int(β, t) - u_int(α, t))
+    end
+
+    # Equations
+    equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
+
+    # Solve discretized problem with DAE formulation
+    sol_exact = solve(
+        equation,
+        x -> u(x, 0.0),
+        (0.0, T),
+        n;
+        method = "discretizefirst",
+        boundary_conditions = "exact",
+        params...,
+    )
+
+    # Solve discretized problem with derivative BC
+    sol_derivative = solve(
+        equation,
+        x -> u(x, 0.0),
+        (0.0, T),
+        n;
+        method = "discretizefirst",
+        boundary_conditions = "derivative",
+        params...,
+    )
+
+    @test sol_exact(T) ≈ sol_derivative(T)
 
 end

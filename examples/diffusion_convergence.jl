@@ -18,13 +18,13 @@ T = 1.0
 @variables x t
 
 # Exact solution (heat equation, Borggaard test case)
-# u = t + sin(2π * x) + sin(8π * x)
-# u_int = t * x - 1 / 2π * cos(2π * x) - 1 / 8π * cos(8π * x)
+u = t + sin(2π * x) + sin(8π * x)
+u_int = t * x - 1 / 2π * cos(2π * x) - 1 / 8π * cos(8π * x)
 
 # Exact solution (heat equation, more complicated test case)
-u = 1 + sin(t) * (1 - 8 / 10 * x^2) + exp(-t) / 15 * sin(20π * x) + 1 / 5 * sin(10x)
-u_int =
-    x + sin(t) * (x - 8 / 30 * x^3) - exp(-t) / 15 / 20π * cos(20π * x) - 1 / 50 * cos(10x)
+# u = 1 + sin(t) * (1 - 8 / 10 * x^2) + exp(-t) / 15 * sin(20π * x) + 1 / 5 * sin(10x)
+# u_int =
+#     x + sin(t) * (x - 8 / 30 * x^3) - exp(-t) / 15 / 20π * cos(20π * x) - 1 / 50 * cos(10x)
 
 # Compute deduced quantities
 dₜ = Differential(t)
@@ -51,11 +51,12 @@ g_b = eval(build_function(g_b, t))
 tols = (; abstol = 1e-9, reltol = 1e-8)
 
 # Number of mesh points
-N = floor.(Int, 10 .^ LinRange(1, 4, 20))
+N = floor.(Int, 10 .^ LinRange(1, 3, 10))
 
 # Errors
 err = zeros(length(N))
 err_bar = zeros(length(N))
+err_adbc = zeros(length(N))
 
 ## Solve
 @time for (i, n) ∈ enumerate(N)
@@ -78,6 +79,16 @@ err_bar = zeros(length(N))
         1 / (β - α) * (u_int(β, t) - u_int(α, t))
     end
 
+    # Exact extended-filtered solution (for ADBC)
+    ū_ext(x, t) = begin
+        xₗ, xᵣ = x - h(x), x + h(x)
+        1 / 2h(x) * (
+            u_int(min(b, xᵣ), t) - u_int(max(a, xₗ), t) +
+            g_a(t) * max(0.0, a - xₗ) +
+            g_b(t) * max(0.0, xᵣ - b)
+        )
+    end
+
     # Solve discretized problem
     sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
 
@@ -92,13 +103,21 @@ err_bar = zeros(length(N))
         tols...,
     )
 
+    # Solve filtered-then-discretized problem with ADBC
+    ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 10000)
+
     # Relative error
     u_exact = u.(x, T)
     ū_exact = ū.(x, T)
+    ū_ext_exact = ū_ext.(x, T)
     err[i] = norm(sol(T) - u_exact) / norm(u_exact)
     err_bar[i] = norm(sol_bar(T) - ū_exact) / norm(ū_exact)
+    err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
 end
 
+
+## Set GR backend for fast plotting
+gr()
 
 ## Set PGFPlotsX plotting backend to export to tikz
 pgfplotsx()
@@ -113,13 +132,15 @@ display(p)
 savefig(p, "output/solution.tikz")
 
 ## Plot convergence
-p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :topright)
+p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :bottomleft)
 plot!(p, N, err, label = "Discretized")
 plot!(p, N, err_bar, label = "Discretized-then-filtered")
+plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
 # plot!(p, N, 1 ./ N .^ 2)
-plot!(p, N, 20 ./ N .^ 2, linestyle = :dash, label = raw"$20 n^{-2}$")
+# plot!(p, N, 20 ./ N .^ 2, linestyle = :dash, label = raw"$20 n^{-2}$")
 # plot!(p, N, 10 ./ N .^ 1.5, linestyle = :dash, label = raw"$10 n^{-3/2}}$")
 xlabel!(p, raw"$n$")
 # title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
 display(p)
-savefig(p, "output/convergence.tikz")
+
+# savefig(p, "output/convergence.tikz")

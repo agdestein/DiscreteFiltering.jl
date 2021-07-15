@@ -25,4 +25,5 @@ end
     include("equations/solve_diffusion.jl")
     include("equations/solve_advection.jl")
     include("equations/solve_burgers.jl")
+    include("equations/solve_adbc.jl")
 end

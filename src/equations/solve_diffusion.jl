@@ -60,8 +60,6 @@ function solve(
         end
         γ_a = derivative(g_a)
         γ_b = derivative(g_b)
-    elseif boundary_conditions == "ADBC"
-        error("Not implemented")
     else
         error("Unknown boundary conditions")
     end

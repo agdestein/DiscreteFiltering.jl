@@ -22,7 +22,7 @@ include("structures/gaussian.jl")
 include("matrices/advection_matrix.jl")
 include("matrices/diffusion_matrix.jl")
 include("matrices/filter_matrix.jl")
-include("matrices/inverse_filter_matrix.jl")
+include("matrices/reconstruction_matrix.jl")
 
 # Equations
 include("equations/equations.jl")
@@ -35,8 +35,8 @@ export advection_matrix,
     diffusion_matrix,
     filter_matrix,
     filter_matrix_meshwidth,
-    inverse_filter_matrix,
-    inverse_filter_matrix_meshwidth
+    reconstruction_matrix,
+    reconstruction_matrix_meshwidth
 export AdvectionEquation, DiffusionEquation, BurgersEquation, solve, solve_adbc
 
 end

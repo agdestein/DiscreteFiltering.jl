@@ -1,24 +1,24 @@
 """
-    inverse_filter_matrix(f, domain, n)
+    reconstruction_matrix(f, domain, n)
 
 Approximate inverse of discrete filtering matrix, given filter `f`.
 """
-function inverse_filter_matrix(::Filter, ::Domain, n)
+function reconstruction_matrix(::Filter, ::Domain, n)
     error("Not implemented")
 end
 
 
-function inverse_filter_matrix(::IdentityFilter, ::ClosedIntervalDomain, n)
+function reconstruction_matrix(::IdentityFilter, ::ClosedIntervalDomain, n)
     sparse(I, n + 1, n + 1)
 end
 
 
-function inverse_filter_matrix(::IdentityFilter, ::PeriodicIntervalDomain, n)
+function reconstruction_matrix(::IdentityFilter, ::PeriodicIntervalDomain, n)
     sparse(I, n, n)
 end
 
 
-function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
+function reconstruction_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     degmax = 30
 
@@ -26,7 +26,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     h = f.width
 
     if all(h.(x) .≈ h(x[1])) && x[2] - x[1] .≈ 2h(x[1])
-        return inverse_filter_matrix_meshwidth(f, domain, n)
+        return reconstruction_matrix_meshwidth(f, domain, n)
     end
 
     R = spzeros(n + 1, n + 1)
@@ -69,7 +69,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 end
 
 
-function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
+function reconstruction_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
 
     degmax = 30
 
@@ -77,7 +77,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
     h = f.width
 
     if all(h.(x) .≈ h(x[1])) && x[2] - x[1] .≈ 2h(x[1])
-        return inverse_filter_matrix_meshwidth(f, domain, n)
+        return reconstruction_matrix_meshwidth(f, domain, n)
     end
 
     R = spzeros(n, n)
@@ -122,7 +122,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
 end
 
 
-function inverse_filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
+function reconstruction_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
     error("Not implemented")
     # G = f.kernel
     # R = spzeros(n + 1, n + 1)
@@ -130,7 +130,7 @@ function inverse_filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDom
 end
 
 
-function inverse_filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n)
+function reconstruction_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n)
     error("Not implemented")
     # G = f.kernel
     # R = spzeros(n, n)
@@ -139,12 +139,12 @@ end
 
 
 """
-    inverse_filter_matrix_meshwidth(f, domain, n)
+    reconstruction_matrix_meshwidth(f, domain, n)
 
 Assemble inverse discrete filtering matrix from a continuous filter `f` width constant width
 \$h(x) = \\Delta x / 2\$.
 """
-function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
+function reconstruction_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
     x = discretize(domain, n)
@@ -181,7 +181,7 @@ function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicInterv
 end
 
 
-function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, n)
+function reconstruction_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
     x = discretize(domain, n)

@@ -42,7 +42,7 @@ ylims!((0, ylims()[2]))
 C = advection_matrix(domain, n)
 D = diffusion_matrix(domain, n)
 W = filter_matrix(filter, domain, n)
-R = inverse_filter_matrix(filter, domain, n)
+R = reconstruction_matrix(filter, domain, n)
 A = spdiagm(α.(x))
 
 

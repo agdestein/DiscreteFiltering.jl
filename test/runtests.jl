@@ -16,7 +16,7 @@ end
     include("matrices/advection_matrix.jl")
     include("matrices/diffusion_matrix.jl")
     include("matrices/filter_matrix.jl")
-    include("matrices/inverse_filter_matrix.jl")
+    include("matrices/reconstruction_matrix.jl")
 end
 
 @testset "Equations" begin

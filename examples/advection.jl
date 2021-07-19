@@ -45,9 +45,9 @@ plot!([x[1], x[end]], [Δx / 2, Δx / 2], label = "Δx/2")
 C = advection_matrix(domain, n)
 D = diffusion_matrix(domain, n)
 # W = filter_matrix(f, domain, n)
-# R = inverse_filter_matrix(f, domain, n)
+# R = reconstruction_matrix(f, domain, n)
 W = filter_matrix_meshwidth(f, domain, n)
-R = inverse_filter_matrix_meshwidth(f, domain, n)
+R = reconstruction_matrix_meshwidth(f, domain, n)
 A = spdiagm(α.(x))
 
 ## Inspect matrices

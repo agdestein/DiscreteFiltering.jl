@@ -16,7 +16,7 @@ function solve(
     C = advection_matrix(domain, n)
     D = diffusion_matrix(domain, n)
     W = filter_matrix(filter, domain, n)
-    R = inverse_filter_matrix(filter, domain, n)
+    R = reconstruction_matrix(filter, domain, n)
 
     uₕ = u.(x)
     ūₕ = W * uₕ
@@ -37,7 +37,8 @@ function solve(
     end
 
     problem = ODEProblem(J, W * uₕ, tlist)
-    solution = OrdinaryDiffEq.solve(problem, LinearExponential(krylov = :simple, m = subspacedim))
+    solution =
+        OrdinaryDiffEq.solve(problem, LinearExponential(krylov = :simple, m = subspacedim))
 
     solution
 end

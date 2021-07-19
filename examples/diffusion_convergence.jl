@@ -12,7 +12,7 @@ b = 1.0
 domain = ClosedIntervalDomain(a, b)
 
 # Time
-T = 1.0
+T = 0.05
 
 ## Symbolics
 @variables x t
@@ -104,7 +104,7 @@ err_adbc = zeros(length(N))
     )
 
     # Solve filtered-then-discretized problem with ADBC
-    ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 10000)
+    ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100000)
 
     # Relative error
     u_exact = u.(x, T)
@@ -133,7 +133,7 @@ savefig(p, "output/solution.tikz")
 
 ## Plot convergence
 p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :bottomleft)
-plot!(p, N, err, label = "Discretized")
+# plot!(p, N, err, label = "Discretized")
 plot!(p, N, err_bar, label = "Discretized-then-filtered")
 plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
 # plot!(p, N, 1 ./ N .^ 2)
@@ -143,4 +143,4 @@ xlabel!(p, raw"$n$")
 # title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
 display(p)
 
-# savefig(p, "output/convergence.tikz")
+savefig(p, "output/convergence_adbc.tikz")

@@ -25,7 +25,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
     x = discretize(domain, n)
     h = f.width
 
-    if all(isequal(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
+    if all(h.(x) .≈ h(x[1])) && x[2] - x[1] .≈ 2h(x[1])
         return inverse_filter_matrix_meshwidth(f, domain, n)
     end
 
@@ -76,7 +76,7 @@ function inverse_filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
     x = discretize(domain, n)
     h = f.width
 
-    if all(isequal(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
+    if all(h.(x) .≈ h(x[1])) && x[2] - x[1] .≈ 2h(x[1])
         return inverse_filter_matrix_meshwidth(f, domain, n)
     end
 
@@ -152,7 +152,7 @@ function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicInterv
     h = f.width
     h₀ = h(x[1])
 
-    all(isequal(h(x[1])), h.(x)) || error("Filter width must be constant")
+    all(h.(x) .≈ h(x[1])) || error("Filter width must be constant")
     Δx .≈ 2h₀ || error("Filter width must be equal to mesh width")
 
     # Three point stencil
@@ -189,7 +189,7 @@ function inverse_filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedInterval
     h = f.width
     h₀ = h(x[1])
 
-    all(isequal(h(x[1])), h.(x)) || error("Filter width must be constant")
+    all(h.(x) .≈ h(x[1])) || error("Filter width must be constant")
     Δx .≈ 2h₀ || error("Filter width must be equal to mesh width")
 
     # Three point stencil

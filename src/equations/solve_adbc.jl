@@ -14,7 +14,7 @@ function solve_adbc(
     u,
     tlist,
     n,
-    Δt = (tlist[2] - tlist[1]) / 200,
+    Δt = (tlist[2] - tlist[1]) / 1000,
 ) where {T}
 
     @unpack domain, filter, f, g_a, g_b = equation
@@ -27,37 +27,49 @@ function solve_adbc(
 
     # Get matrices
     D = diffusion_matrix(domain, n)
-    W = filter_matrix(filter, domain, n)
-    R = inverse_filter_matrix(filter, domain, n)
 
-    W₀ = W[1, :]'
-    Wₙ = W[end, :]'
+    # Filter matrix
+    inds = [-1, 0, 1]
+    stencil = [1 / 24, 11 / 12, 1 / 24]
+    diags = [i => fill(s, n + 1 - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    W = spdiagm(diags...)
+    W[1, [1, 2]] = [23 / 24, 1 / 24]
+    W[end, [end, end - 1]] = [23 / 24, 1 / 24]
+    w₀ = W[1, :]
+    wₙ = W[end, :]
+
+    # Reconstruction matrix
+    inds = [-1, 0, 1]
+    stencil = [-1 / 24, 13 / 12, -1 / 24]
+    diags = [i => fill(s, n + 1 - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    R = spdiagm(diags...)
+    R[1, [1, 2]] = [25 / 24, -1 / 24]
+    R[end, [end, end - 1]] = [25 / 24, -1 / 24]
 
     ūᵏ = W * u.(x)
     ūᵏ⁺¹ = copy(ūᵏ)
     uᵏ = copy(ūᵏ)
     ũᵏ⁺¹ = copy(ūᵏ)
     tᵏ = tlist[1]
-    while tᵏ + Δt ≤ tlist[2]
+    while tᵏ + Δt < tlist[2]
         # Current approximate unfiltered solution
         mul!(uᵏ, R, ūᵏ)
 
-        # Nex approximate unfiltered solution
+        # Next approximate unfiltered solution
         ũᵏ⁺¹ .= uᵏ
         ũᵏ⁺¹[1] = g_a(tᵏ + Δt)
         ũᵏ⁺¹[end] = g_b(tᵏ + Δt)
 
-        # Boundary conditions
-        ūᵏ⁺¹[1] = W₀ * ũᵏ⁺¹
-        ūᵏ⁺¹[end] = Wₙ * ũᵏ⁺¹
+        # Filtered boundary conditions
+        ūᵏ⁺¹[1] = w₀'ũᵏ⁺¹
+        ūᵏ⁺¹[end] = wₙ'ũᵏ⁺¹
 
-        # Next inner points
-        ūᵏ⁺¹[2:end-1] .= (
-            ūᵏ[2:end-1] .+
+        # Next inner points for filtered solution
+        ūᵏ⁺¹[2:end-1] .+= (
             Δt .* (
                 D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
-                (abs.(x[2:end-1] .- b) .< h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
-                (abs.(x[2:end-1] .- a) .< h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
+                (abs.(x[2:end-1] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
+                (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
             )
         )
 
@@ -65,6 +77,34 @@ function solve_adbc(
         tᵏ += Δt
         ūᵏ .= ūᵏ⁺¹
     end
+
+    # Perform last time step (with adapted step)
+    Δt_last = tlist[2] - tᵏ
+
+    # Current approximate unfiltered solution
+    mul!(uᵏ, R, ūᵏ)
+
+    # Next approximate unfiltered solution
+    ũᵏ⁺¹ .= uᵏ
+    ũᵏ⁺¹[1] = g_a(tᵏ + Δt_last)
+    ũᵏ⁺¹[end] = g_b(tᵏ + Δt_last)
+
+    # Filtered boundary conditions
+    ūᵏ⁺¹[1] = w₀'ũᵏ⁺¹
+    ūᵏ⁺¹[end] = wₙ'ũᵏ⁺¹
+
+    # Next inner points for filtered solution
+    ūᵏ⁺¹[2:end-1] .+= (
+        Δt_last .* (
+            D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
+            (abs.(x[2:end-1] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
+            (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
+        )
+    )
+
+    # Advance by Δt_last
+    tᵏ += Δt_last
+    ūᵏ .= ūᵏ⁺¹
 
     ūᵏ
 end

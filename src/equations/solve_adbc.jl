@@ -65,13 +65,10 @@ function solve_adbc(
         ūᵏ⁺¹[end] = wₙ'ũᵏ⁺¹
 
         # Next inner points for filtered solution
-        ūᵏ⁺¹[2:end-1] .+= (
-            Δt .* (
-                D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
-                (abs.(x[2:end-1] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
-                (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
-            )
-        )
+        ūᵏ⁺¹[2:end-1] .+=
+            Δt .* D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
+            Δt .* (abs.(x[2:end-1] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
+            Δt .* (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
 
         # Advance by Δt
         tᵏ += Δt

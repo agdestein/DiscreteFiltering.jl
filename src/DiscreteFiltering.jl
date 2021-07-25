@@ -1,12 +1,12 @@
 "Discrete filtering toolbox"
 module DiscreteFiltering
 
+using ApproxFun: chebyshevt, integrate
 using Intervals
 using LinearAlgebra
 using OrdinaryDiffEq:
     ODEFunction, ODEProblem, QNDF, OrdinaryDiffEq, DiffEqArrayOperator, LinearExponential
 using Parameters
-using Polynomials
 using SparseArrays
 using NonNegLeastSquares
 using Zygote

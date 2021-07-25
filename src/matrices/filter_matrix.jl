@@ -34,7 +34,8 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     τ(x) = (x - mid) / L
     τ(x, a, b) = (x - (a + b) / 2) / (b - a)
-    ϕ = [ChebyshevT([fill(0, i); 1]) for i = 0:degmax]
+    ϕ = chebyshevt.(0:degmax)
+    ϕ_int = integrate.(ϕ)
 
     W = spzeros(n + 1, n + 1)
     for i = 1:n+1
@@ -51,10 +52,16 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
         # Polynomials evaluated at integration points
-        Vᵢ = vander(ChebyshevT, τ.(x[inds]), deg)'
+        Vᵢ = zeros(deg + 1, length(x[inds]))
 
         # Polynomial moments around point
-        μᵢ = integrate.(ϕ[1:deg+1], τ(Ival.first), τ(Ival.last))
+        μᵢ = zeros(deg + 1)
+
+        # Fill in
+        for d = 1:deg+1
+            Vᵢ[d, :] = ϕ[d].(τ.(x[inds]))
+            μᵢ[d] = ϕ_int[d](τ(Ival.last)) - ϕ_int[d](τ(Ival.first))
+        end
         μᵢ .*= L / Ival_length
 
         # Fit weights
@@ -83,7 +90,8 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     τ(x) = (x - mid) / L
     τ(x, a, b) = (x - (a + b) / 2) / (b - a)
     degmax = 100
-    ϕ = [ChebyshevT([fill(0, i); 1]) for i = 0:degmax]
+    ϕ = chebyshevt.(0:degmax)
+    ϕ_int = integrate.(ϕ)
 
     W = spzeros(n, n)
     for i = 1:n
@@ -102,16 +110,22 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
         # Polynomials evaluated at integration points
-        Vᵢ = vander(ChebyshevT, τ.(x[inds]), deg)'
+        Vᵢ = zeros(deg + 1, length(x[inds]))
 
         # Polynomial moments around point
         Domain = Interval(0, 2π)
         I_left = (Ival + 2π) ∩ Domain
         I_mid = Ival ∩ Domain
         I_right = (Ival - 2π) ∩ Domain
-        μᵢ = integrate.(ϕ[1:deg+1], τ(I_left.first), τ(I_left.last))
-        μᵢ .+= integrate.(ϕ[1:deg+1], τ(I_mid.first), τ(I_mid.last))
-        μᵢ .+= integrate.(ϕ[1:deg+1], τ(I_right.first), τ(I_right.last))
+
+        # Fill in
+        μᵢ = zeros(deg + 1)
+        for d = 1:deg+1
+            Vᵢ[d, :] = ϕ[d].(τ.(x[inds]))
+            μᵢ[d] += ϕ_int[d](τ(I_left.last)) - ϕ_int[d](τ(I_left.first))
+            μᵢ[d] += ϕ_int[d](τ(I_mid.last)) - ϕ_int[d](τ(I_mid.first))
+            μᵢ[d] += ϕ_int[d](τ(I_right.last)) - ϕ_int[d](τ(I_right.first))
+        end
         μᵢ .*= L / 2hᵢ
 
         # Fit weights

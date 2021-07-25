@@ -3,7 +3,7 @@ using LinearAlgebra
 using SparseArrays
 using Test
 
-@testset "DiscreteFiltering" begin
+@testset "Discrete filtering" begin
     @testset "Domains" begin
         include("structures/domain.jl")
     end

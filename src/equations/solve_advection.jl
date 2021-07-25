@@ -21,7 +21,6 @@ function solve(
     uₕ = u.(x)
     ūₕ = W * uₕ
 
-    du!(du, u, p, t) = mul!(du, p.J, u)
     if method == "filterfirst"
         F === TopHatFilter ||
             error("Method \"filterfirst\" is only implemented for TopHatFilter")

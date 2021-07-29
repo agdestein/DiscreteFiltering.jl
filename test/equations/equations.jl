@@ -8,7 +8,7 @@
     # Filters
     identity_filter = IdentityFilter()
     top_hat_filter = TopHatFilter(x -> 0.1)
-    convolutional_filter = ConvolutionalFilter(gaussian(0.1^2))
+    convolutional_filter = GaussianFilter(0.1)
 
     # AdvectionEquation
     eq = AdvectionEquation(closed, identity_filter)

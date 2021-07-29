@@ -11,7 +11,15 @@ end
 end
 
 @testset "ConvolutionalFilter" begin
-    G = gaussian(0.1^2)
-    f = ConvolutionalFilter(G)
+    h = x -> 1
+    G = x -> x^2
+    f = ConvolutionalFilter(h, G)
+    @test f.width == h
     @test f.kernel == G
+end
+
+@testset "GaussianFilter" begin
+    σ = 0.1
+    G = GaussianFilter(σ)
+    @test G.kernel(0.0) ≈ 1 / √(2π * σ²)
 end

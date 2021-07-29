@@ -52,8 +52,7 @@
 
 
     ## Convolutional filter
-    G = gaussian(h₀^2)
-    g = ConvolutionalFilter(G)
+    g = Gaussian(h₀)
 
     # ClosedIntervalDomain
     @test_throws Exception filter_matrix(g, closed_interval, n)

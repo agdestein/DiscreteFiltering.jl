@@ -9,7 +9,6 @@ using Test
     end
 
     @testset "Filters" begin
-        include("structures/gaussian.jl")
         include("structures/filter.jl")
     end
 

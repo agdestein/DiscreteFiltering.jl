@@ -22,6 +22,7 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     degmax = 100
 
+    Ival_domain = domain.left..domain.right
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
 
@@ -32,7 +33,7 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         return filter_matrix_meshwidth(f, domain, n)
     end
 
-    ϕ = chebyshevt.(0:degmax, [domain])
+    ϕ = chebyshevt.(0:degmax, [Ival_domain])
     ϕ_int = integrate.(ϕ)
 
     W = spzeros(n + 1, n + 1)
@@ -44,9 +45,9 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domaain
-        Ival = (xᵢ ± hᵢ) ∩ (domain.left..domain.right)
+        Ival = (xᵢ ± hᵢ) ∩ Ival_domain
         Ival_length = Ival.right - Ival.left
-        inds = x .∈ Ival
+        inds = x .∈ [Ival]
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
         # Polynomials evaluated at integration points
@@ -60,13 +61,13 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
             Vᵢ[d, :] = ϕ[d].(x[inds])
             μᵢ[d] = ϕ_int[d](Ival.right) - ϕ_int[d](Ival.left)
         end
-        μᵢ .*= L / Ival_length
+        μᵢ ./= Ival_length
 
         # Fit weights
         wᵢ = nonneg_lsq(Vᵢ, μᵢ)
 
         # Store weights
-        W[i, inds] .= wᵢ[:]
+        W[i, inds] .= wᵢ[:] ./ sum(wᵢ)
     end
 
     W
@@ -75,6 +76,7 @@ end
 
 function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
 
+    Ival_domain = domain.left..domain.right
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
 
@@ -86,7 +88,7 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
     end
 
     degmax = 100
-    ϕ = chebyshevt.(0:degmax, domain)
+    ϕ = chebyshevt.(0:degmax, [Ival_domain])
     ϕ_int = integrate.(ϕ)
 
     W = spzeros(n, n)
@@ -99,9 +101,9 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
 
         # Indices of integration points in circular reference
         Ival = xᵢ ± hᵢ
-        inds_left = x .- L .∈ Ival
-        inds_mid = x .∈ Ival
-        inds_right = x .+ L .∈ Ival
+        inds_left = x .- L .∈ [Ival]
+        inds_mid = x .∈ [Ival]
+        inds_right = x .+ L .∈ [Ival]
         inds = inds_left .| inds_mid .| inds_right
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
@@ -109,10 +111,9 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         Vᵢ = zeros(deg + 1, length(x[inds]))
 
         # Polynomial moments around point
-        D = (domain.left..domain.right)
-        I_left = Interval((endpoints(Ival) .+ L)...) ∩ D
-        I_mid = Ival ∩ D
-        I_right = Interval((endpoints(Ival) .- L)...) ∩ D
+        I_left = Interval((endpoints(Ival) .+ L)...) ∩ Ival_domain
+        I_mid = Ival ∩ Ival_domain
+        I_right = Interval((endpoints(Ival) .- L)...) ∩ Ival_domain
 
         # Fill in
         μᵢ = zeros(deg + 1)
@@ -122,7 +123,7 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
             μᵢ[d] += ϕ_int[d](I_mid.right) - ϕ_int[d](I_mid.left)
             μᵢ[d] += ϕ_int[d](I_right.right) - ϕ_int[d](I_right.left)
         end
-        μᵢ .*= L / 2hᵢ
+        μᵢ ./= 2hᵢ
 
         # Fit weights
         wᵢ = nonneg_lsq(Vᵢ, μᵢ)
@@ -222,7 +223,7 @@ function filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n
         n = length(xⱼ)
 
         # deg = min(degmax, max(1, floor(Int, √(n - 1))))
-        deg = min(degmax, sum(inds))
+        deg = min(degmax, sum(j))
         ϕ = chebyshevt(0:deg, Ival)
 
         # Normalized kernel Fun
@@ -247,7 +248,7 @@ function filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n
         wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, n, n)) \ Vᵢ'μᵢ
 
         # Store weights
-        W[i, j] .= wᵢ[:]
+        W[i, j] .= wᵢ[:] ./ sum(wᵢ)
     end
 
     W

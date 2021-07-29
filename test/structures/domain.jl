@@ -24,7 +24,6 @@
     @test maximum(x) == b
 
     # Concrete unknown domain type
-    struct UnknownDomain <: DiscreteFiltering.Domain end
     domain = UnknownDomain()
     @test_throws Exception discretize(domain, 10)
 end

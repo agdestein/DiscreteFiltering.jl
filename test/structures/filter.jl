@@ -21,5 +21,5 @@ end
 @testset "GaussianFilter" begin
     σ = 0.1
     G = GaussianFilter(σ)
-    @test G.kernel(0.0) ≈ 1 / √(2π * σ²)
+    @test G.kernel(0.0) ≈ 1 / √(2π * σ^2)
 end

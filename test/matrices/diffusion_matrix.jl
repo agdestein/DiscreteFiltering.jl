@@ -24,7 +24,6 @@
     @test D[end, 1] > 0
 
     # Concrete unknown domain type
-    struct UnknownDomain <: DiscreteFiltering.Domain end
     domain = UnknownDomain()
     @test_throws Exception diffusion_matrix(domain, n)
 end

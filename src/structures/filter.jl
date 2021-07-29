@@ -36,7 +36,7 @@ end
 GaussianFilter(h, σ) -> ConvolutionalFilter
 GaussianFilter(σ) -> ConvolutionalFilter
 
-Create Gaussian ConvolutionalFilter with domain width `2h` and variance `σ²`.
+Create Gaussian ConvolutionalFilter with domain width `2h` and variance `σ^2`.
 """
 GaussianFilter(h, σ) = ConvolutionalFilter(h, x -> 1 / √(2π * σ^2) * exp(-x^2 / 2σ^2))
 GaussianFilter(σ) = GaussianFilter(x -> 10σ, σ)

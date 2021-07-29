@@ -1,17 +1,16 @@
 @testset "Filter matrix" begin
     a = 0.0
     b = 2π
-    n = 500
+    n = 100
     Δx = (b - a) / n
 
     # Domains
     closed_interval = ClosedIntervalDomain(a, b)
     periodic_interval = PeriodicIntervalDomain(a, b)
-    struct UnknownDomain <: DiscreteFiltering.Domain end
     unknown_domain = UnknownDomain()
 
 
-    ## Top hat filter
+    ## Identity filter
     f = IdentityFilter()
 
     # ClosedIntervalDomain
@@ -45,28 +44,26 @@
     W = filter_matrix(f, periodic_interval, n)
     @test W isa SparseMatrixCSC
     @test size(W) == (n, n)
-    @test_broken all(sum(W, dims = 2) .≈ 1)
+    @test all(sum(W, dims = 2) .≈ 1)
 
     # Unknown domain
     @test_throws Exception filter_matrix(f, unknown_domain, n)
 
 
     ## Convolutional filter
-    g = Gaussian(h₀)
+    g = GaussianFilter(h₀)
 
     # ClosedIntervalDomain
-    @test_throws Exception filter_matrix(g, closed_interval, n)
-    # W = filter_matrix(g, closed_interval, n)
-    # @test W isa SparseMatrixCSC
-    # @test size(W) == (n, n)
-    # @test all(sum(W, dims = 2) .≈ 1)
-
+    W = filter_matrix(g, closed_interval, n)
+    @test W isa SparseMatrixCSC
+    @test size(W) == (n + 1, n + 1)
+    @test all(sum(W, dims = 2) .≈ 1)
+    
     # PeriodicIntervalDomain
-    @test_throws Exception filter_matrix(g, periodic_interval, n)
-    # W = filter_matrix(g, periodic_interval, n)
-    # @test W isa SparseMatrixCSC
-    # @test size(W) == (n + 1, n + 1)
-    # @test all(sum(W, dims = 2) .≈ 1)
+    W = filter_matrix(g, periodic_interval, n)
+    @test W isa SparseMatrixCSC
+    @test size(W) == (n, n)
+    @test all(sum(W, dims = 2) .≈ 1)
 
     # Unknown domain
     @test_throws Exception filter_matrix(g, unknown_domain, n)

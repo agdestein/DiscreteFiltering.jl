@@ -7,7 +7,6 @@
     # Domains
     closed_interval = ClosedIntervalDomain(a, b)
     periodic_interval = PeriodicIntervalDomain(a, b)
-    struct UnknownDomain <: DiscreteFiltering.Domain end
     unknown_domain = UnknownDomain()
 
 
@@ -52,21 +51,20 @@
 
 
     ## Convolutional filter
-    g = Gaussian(h₀)
+    σ = Δx
+    g = GaussianFilter(σ)
 
     # ClosedIntervalDomain
-    @test_throws Exception reconstruction_matrix(g, closed_interval, n)
-    # R = reconstruction_matrix(g, closed_interval, n)
-    # @test R isa SparseMatrixCSC
-    # @test size(R) == (n, n)
-    # @test all(sum(R, dims = 2) .≈ 1)
-
+    R = reconstruction_matrix(g, closed_interval, n)
+    @test R isa SparseMatrixCSC
+    @test size(R) == (n + 1, n + 1)
+    @test all(sum(R, dims = 2) .≈ 1)
+    
     # PeriodicIntervalDomain
-    @test_throws Exception reconstruction_matrix(g, periodic_interval, n)
-    # R = reconstruction_matrix(g, periodic_interval, n)
-    # @test R isa SparseMatrixCSC
-    # @test size(R) == (n + 1, n + 1)
-    # @test all(sum(R, dims = 2) .≈ 1)
+    R = reconstruction_matrix(g, periodic_interval, n)
+    @test R isa SparseMatrixCSC
+    @test size(R) == (n, n)
+    @test all(sum(R, dims = 2) .≈ 1)
 
     # Unknown domain
     @test_throws Exception reconstruction_matrix(f, unknown_domain, n)

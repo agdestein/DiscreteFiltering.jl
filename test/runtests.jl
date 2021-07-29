@@ -4,11 +4,11 @@ using SparseArrays
 using Test
 
 @testset "Discrete filtering" begin
-    @testset "Domains" begin
-        include("structures/domain.jl")
-    end
+    # Unknown domain type
+    struct UnknownDomain <: DiscreteFiltering.Domain end
 
-    @testset "Filters" begin
+    @testset "Structures" begin
+        include("structures/domain.jl")
         include("structures/filter.jl")
     end
 

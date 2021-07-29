@@ -62,7 +62,7 @@ function reconstruction_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         rᵢ = Vᵢ \ μᵢ
 
         # Store weights
-        R[i, j] .= rᵢ[:]
+        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
     end
 
     R
@@ -118,7 +118,7 @@ function reconstruction_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
         rᵢ = Vᵢ \ μᵢ
 
         # Store weights
-        R[i, j] .= rᵢ[:]
+        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
     end
 
     R
@@ -180,7 +180,7 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDom
         rᵢ = (V'V + sparse(1e-8I, size(V))) \ (V'f)
 
         # Store weights
-        R[i, j] .= rᵢ[:]
+        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
     end
 
     R
@@ -249,7 +249,7 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalD
         rᵢ = (V'V + sparse(1e-8I, size(V))) \ (V'f)
 
         # Store weights
-        R[i, j] .= rᵢ[:]
+        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
     end
 
     R

@@ -27,7 +27,6 @@
     @test C[end, 1] > 0
 
     # Concrete unknown domain type
-    struct UnknownDomain <: DiscreteFiltering.Domain end
     domain = UnknownDomain()
     @test_throws Exception advection_matrix(domain, n)
 end

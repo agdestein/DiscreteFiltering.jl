@@ -16,7 +16,6 @@ include("structures/domain.jl")
 
 # Filter
 include("structures/filter.jl")
-include("structures/gaussian.jl")
 
 # Matrix assembly
 include("matrices/advection_matrix.jl")
@@ -29,8 +28,13 @@ include("equations/equations.jl")
 include("equations/solve.jl")
 include("equations/solve_adbc.jl")
 
-export ClosedIntervalDomain, discretize, PeriodicIntervalDomain
-export IdentityFilter, TopHatFilter, ConvolutionalFilter, gaussian
+export ClosedIntervalDomain, PeriodicIntervalDomain, discretize
+export IdentityFilter,
+    TopHatFilter,
+    ConvolutionalFilter,
+    GaussianFilter,
+    apply_filter,
+    apply_filter_extend
 export advection_matrix,
     diffusion_matrix,
     filter_matrix,

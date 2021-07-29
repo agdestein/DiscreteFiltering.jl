@@ -46,23 +46,20 @@ function solve_adbc(
     R[1, [1, 2]] = [25 / 24, -1 / 24]
     R[end, [end, end - 1]] = [25 / 24, -1 / 24]
 
-    ūᵏ = W * u.(x)
-    ūᵏ⁺¹ = copy(ūᵏ)
-    uᵏ = copy(ūᵏ)
-    ũᵏ⁺¹ = copy(ūᵏ)
-    tᵏ = tlist[1]
-    while tᵏ + Δt < tlist[2]
+    function perform_step!(ūᵏ, tᵏ, Δt, p)
+        uᵏ, uᵏ⁺¹, ūᵏ⁺¹ = p
+
         # Current approximate unfiltered solution
         mul!(uᵏ, R, ūᵏ)
 
         # Next approximate unfiltered solution
-        ũᵏ⁺¹ .= uᵏ
-        ũᵏ⁺¹[1] = g_a(tᵏ + Δt)
-        ũᵏ⁺¹[end] = g_b(tᵏ + Δt)
+        uᵏ⁺¹ .= uᵏ
+        uᵏ⁺¹[1] = g_a(tᵏ + Δt)
+        uᵏ⁺¹[end] = g_b(tᵏ + Δt)
 
         # Filtered boundary conditions
-        ūᵏ⁺¹[1] = w₀'ũᵏ⁺¹
-        ūᵏ⁺¹[end] = wₙ'ũᵏ⁺¹
+        ūᵏ⁺¹[1] = w₀'uᵏ⁺¹
+        ūᵏ⁺¹[end] = wₙ'uᵏ⁺¹
 
         # Next inner points for filtered solution
         ūᵏ⁺¹[2:end-1] .+=
@@ -71,12 +68,24 @@ function solve_adbc(
             Δt .* (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
 
         # Advance by Δt
-        tᵏ += Δt
         ūᵏ .= ūᵏ⁺¹
     end
 
-    # Perform last time step (with adapted step)
+    ūᵏ = W * u.(x)
+    p = (copy(ūᵏ), copy(ūᵏ), copy(ūᵏ))
+    tᵏ = tlist[1]
+    while tᵏ + Δt < tlist[2]
+        perform_step!(ūᵏ, tᵏ, Δt, p)
+        tᵏ += Δt
+    end
+
+    # Perform last time step (with adapted step size)
     Δt_last = tlist[2] - tᵏ
+    perform_step!(ūᵏ, tᵏ, Δt_last, p)
+    tᵏ += Δt
+
+    ūᵏ
+end
 
     # Current approximate unfiltered solution
     mul!(uᵏ, R, ūᵏ)

@@ -32,9 +32,7 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         return filter_matrix_meshwidth(f, domain, n)
     end
 
-    τ(x) = (x - mid) / L
-    τ(x, a, b) = (x - (a + b) / 2) / (b - a)
-    ϕ = chebyshevt.(0:degmax)
+    ϕ = chebyshevt.(0:degmax, [domain])
     ϕ_int = integrate.(ϕ)
 
     W = spzeros(n + 1, n + 1)
@@ -46,8 +44,8 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domaain
-        Ival = Interval(xᵢ - hᵢ, xᵢ + hᵢ) ∩ Interval(domain.left, domain.right)
-        Ival_length = Ival.last - Ival.first
+        Ival = (xᵢ ± hᵢ) ∩ (domain.left..domain.right)
+        Ival_length = Ival.right - Ival.left
         inds = x .∈ Ival
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
@@ -59,8 +57,8 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
         # Fill in
         for d = 1:deg+1
-            Vᵢ[d, :] = ϕ[d].(τ.(x[inds]))
-            μᵢ[d] = ϕ_int[d](τ(Ival.last)) - ϕ_int[d](τ(Ival.first))
+            Vᵢ[d, :] = ϕ[d].(x[inds])
+            μᵢ[d] = ϕ_int[d](Ival.right) - ϕ_int[d](Ival.left)
         end
         μᵢ .*= L / Ival_length
 
@@ -87,10 +85,8 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         return filter_matrix_meshwidth(f, domain, n)
     end
 
-    τ(x) = (x - mid) / L
-    τ(x, a, b) = (x - (a + b) / 2) / (b - a)
     degmax = 100
-    ϕ = chebyshevt.(0:degmax)
+    ϕ = chebyshevt.(0:degmax, domain)
     ϕ_int = integrate.(ϕ)
 
     W = spzeros(n, n)
@@ -102,10 +98,10 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         hᵢ = h(xᵢ)
 
         # Indices of integration points in circular reference
-        Ival = Interval(xᵢ - hᵢ, xᵢ + hᵢ)
-        inds_left = x .∈ Ival + L
+        Ival = xᵢ ± hᵢ
+        inds_left = x .- L .∈ Ival
         inds_mid = x .∈ Ival
-        inds_right = x .∈ Ival - L
+        inds_right = x .+ L .∈ Ival
         inds = inds_left .| inds_mid .| inds_right
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
@@ -113,18 +109,18 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         Vᵢ = zeros(deg + 1, length(x[inds]))
 
         # Polynomial moments around point
-        Domain = Interval(0, 2π)
-        I_left = (Ival + 2π) ∩ Domain
-        I_mid = Ival ∩ Domain
-        I_right = (Ival - 2π) ∩ Domain
+        D = (domain.left..domain.right)
+        I_left = Interval((endpoints(Ival) .+ L)...) ∩ D
+        I_mid = Ival ∩ D
+        I_right = Interval((endpoints(Ival) .- L)...) ∩ D
 
         # Fill in
         μᵢ = zeros(deg + 1)
         for d = 1:deg+1
-            Vᵢ[d, :] = ϕ[d].(τ.(x[inds]))
-            μᵢ[d] += ϕ_int[d](τ(I_left.last)) - ϕ_int[d](τ(I_left.first))
-            μᵢ[d] += ϕ_int[d](τ(I_mid.last)) - ϕ_int[d](τ(I_mid.first))
-            μᵢ[d] += ϕ_int[d](τ(I_right.last)) - ϕ_int[d](τ(I_right.first))
+            Vᵢ[d, :] = ϕ[d].(x[inds])
+            μᵢ[d] += ϕ_int[d](I_left.right) - ϕ_int[d](I_left.left)
+            μᵢ[d] += ϕ_int[d](I_mid.right) - ϕ_int[d](I_mid.left)
+            μᵢ[d] += ϕ_int[d](I_right.right) - ϕ_int[d](I_right.left)
         end
         μᵢ .*= L / 2hᵢ
 
@@ -133,7 +129,7 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         # wᵢ = Vᵢ \ μᵢ
 
         # Store weights
-        W[i, inds] .= wᵢ[:]
+        W[i, inds] .= wᵢ[:] ./ sum(wᵢ)
     end
 
     W

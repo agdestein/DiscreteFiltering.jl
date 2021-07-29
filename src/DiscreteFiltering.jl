@@ -1,8 +1,8 @@
 "Discrete filtering toolbox"
 module DiscreteFiltering
 
-using ApproxFun: chebyshevt, integrate
-using Intervals
+using ApproxFun: Fun, chebyshevt, integrate
+using IntervalSets
 using LinearAlgebra
 using OrdinaryDiffEq:
     ODEFunction, ODEProblem, QNDF, OrdinaryDiffEq, DiffEqArrayOperator, LinearExponential

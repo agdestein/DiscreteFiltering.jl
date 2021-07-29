@@ -137,18 +137,120 @@ end
 
 
 function filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
-    error("Not implemented")
-    # G = f.kernel
-    # W = spzeros(n + 1, n + 1)
-    # W
+
+    degmax = 100
+
+    L = (domain.right - domain.left)
+    mid = (domain.left + domain.right) / 2
+
+    h = f.width
+    G = f.kernel
+    x = discretize(domain, n)
+    W = spzeros(n + 1, n + 1)
+
+    for i = 1:n+1
+        # Point
+        xᵢ = x[i]
+
+        # Filter width at point
+        hᵢ = h(xᵢ)
+
+        # Indices of integration points inside domaain
+        Ival = (xᵢ ± hᵢ)# ∩ (domain.left..domain.right)
+        j = x .∈ [Ival]
+        xⱼ = x[j]
+        n = length(xⱼ)
+
+        # deg = min(degmax, max(1, floor(Int, √(n - 1))))
+        deg = min(degmax, n)
+        ϕ = chebyshevt(0:deg, Ival)
+
+        # Normalized kernel Fun
+        kern = Fun(x -> G(x - xᵢ), Ival)
+        kern /= sum(kern)
+
+        # Polynomials evaluated at integration points
+        Vᵢ = zeros(deg + 1, n)
+
+        # Polynomial moments around point
+        μᵢ = zeros(deg + 1)
+
+        # Fill in
+        for d = 1:deg+1
+            Vᵢ[d, :] = ϕ[d].(xⱼ)
+            μᵢ[d] = sum(kern * ϕ[d])
+        end
+
+        # Fit weights
+        wᵢ = Vᵢ \ μᵢ
+        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
+        # wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, n, n)) \ Vᵢ'μᵢ
+
+        # Store weights
+        W[i, j] .= wᵢ[:] ./ sum(wᵢ)
+    end
+
+    W
 end
 
 
 function filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n)
-    error("Not implemented")
-    # G = f.kernel
-    # W = spzeros(n, n)
-    # W
+    degmax = 100
+
+    L = (domain.right - domain.left)
+    mid = (domain.left + domain.right) / 2
+
+    h = f.width
+    G = f.kernel
+    x = discretize(domain, n)
+    W = spzeros(n, n)
+
+    for i = 1:n
+        # Point
+        xᵢ = x[i]
+
+        # Filter width at point
+        hᵢ = h(xᵢ)
+
+        # Indices of integration points inside domaain
+        Ival = (xᵢ ± hᵢ)
+        indsleft = x .+ L .∈ [Ival]
+        indsmid = x .∈ [Ival]
+        indsright = x .- L .∈ [Ival]
+        j = indsleft .| indsmid .| indsright
+        xⱼ = (x + L * indsleft - L * indsright)[j]
+        n = length(xⱼ)
+
+        # deg = min(degmax, max(1, floor(Int, √(n - 1))))
+        deg = min(degmax, sum(inds))
+        ϕ = chebyshevt(0:deg, Ival)
+
+        # Normalized kernel Fun
+        kern = Fun(x -> G(x - xᵢ), Ival)
+        kern /= sum(kern)
+
+        # Polynomials evaluated at integration points
+        Vᵢ = zeros(deg + 1, n)
+
+        # Polynomial moments around point
+        μᵢ = zeros(deg + 1)
+
+        # Fill in
+        for d = 1:deg+1
+            Vᵢ[d, :] = ϕ[d].(xⱼ)
+            μᵢ[d] = sum(kern * ϕ[d])
+        end
+
+        # Fit weights
+        # wᵢ = Vᵢ \ μᵢ
+        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
+        wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, n, n)) \ Vᵢ'μᵢ
+
+        # Store weights
+        W[i, j] .= wᵢ[:]
+    end
+
+    W
 end
 
 
@@ -181,7 +283,7 @@ function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain
     diags = [i => fill(s, n - abs(i)) for (i, s) ∈ zip(inds, stencil)]
     W = spdiagm(diags...)
 
-    # Periodic extension of three point stencil  
+    # Periodic extension of three point stencil
     W[1, end] = 1 / 24
     W[end, 1] = 1 / 24
 

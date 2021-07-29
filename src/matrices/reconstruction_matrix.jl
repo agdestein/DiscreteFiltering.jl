@@ -126,18 +126,133 @@ end
 
 
 function reconstruction_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
-    error("Not implemented")
-    # G = f.kernel
-    # R = spzeros(n + 1, n + 1)
-    # R
+    degmax = 100
+
+    L = (domain.right - domain.left)
+    mid = (domain.left + domain.right) / 2
+
+    h = f.width
+    G = f.kernel
+    x = discretize(domain, n)
+    R = spzeros(n + 1, n + 1)
+
+    # Get reconstruction weights for each point
+    for i = 1:n+1
+        # Point
+        xᵢ = x[i]
+
+        dists = abs.(x .- xᵢ)
+
+        # Find j such that xᵢ is reachable from xⱼ
+        j = dists .< h.(x)
+
+        # Polynomial degree (Taylor series order)
+        deg = sum(j)
+        # deg = min(degmax, max(1, floor(Int, √sum(j))))
+
+        # Vandermonde matrix
+        d = 1:deg
+        xⱼ = x[j]
+        hⱼ = h.(xⱼ)
+        aⱼ = max.(xⱼ - hⱼ, domain.left)
+        bⱼ = min.(xⱼ + hⱼ, domain.right)
+        # Δhⱼ = bⱼ - aⱼ
+        ivals = xⱼ .± hⱼ
+        # ivals = Interval.(aⱼ, bⱼ)
+
+        N = length(xⱼ) + 1
+
+        ϕ = chebyshevt.(d, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
+        # ϕ = chebyshevt.(d, [domain.left..domain.right])
+
+        V = zeros(N - 1, N - 1)
+        f = zeros(N - 1)
+        for j = 1:N-1
+            ival = ivals[j]
+            ϕⱼ = Fun.(ϕ, [ival])
+            kern = Fun(x -> G(x - xⱼ[j]), ival)
+            kern /= sum(kern)
+            V[:, j] = sum.(kern .* ϕⱼ)
+            f[j] = ϕ[j](xᵢ)
+        end
+
+        # rᵢ = V \ f
+        rᵢ = (V'V + sparse(1e-8I, size(V))) \ (V'f)
+
+        # Store weights
+        R[i, j] .= rᵢ[:]
+    end
+
+    R
 end
 
 
 function reconstruction_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n)
-    error("Not implemented")
-    # G = f.kernel
-    # R = spzeros(n, n)
-    # R
+    degmax = 100
+
+    L = (domain.right - domain.left)
+    mid = (domain.left + domain.right) / 2
+
+    h = f.width
+    G = f.kernel
+    x = discretize(domain, n)
+    R = spzeros(n, n)
+
+    # Get reconstruction weights for each point
+    for i = 1:n
+        # Point
+        xᵢ = x[i]
+
+        dists = @. abs(xᵢ - x - [-L 0 L])
+
+        # Move x by 2π * (shifts - 2) to get closer to xᵢ
+        mininds = argmin(dists, dims = 2)
+        shifts = [mininds[j].I[2] for j in eachindex(mininds)]
+    
+        # Find j such that xᵢ is reachable from xⱼ
+        j = dists[mininds][:] .< h.(x)
+    
+        # Vandermonde matrix
+        sⱼ = 2π * (shifts[j]' .- 2)
+        xⱼ = x[j]' + sⱼ
+        hⱼ = h.(xⱼ)
+
+        # Polynomial degree (Taylor series order)
+        deg = sum(j)
+        # deg = min(degmax, max(1, floor(Int, √sum(j))))
+
+        # Vandermonde matrix
+        d = 1:deg
+        aⱼ = max.(xⱼ - hⱼ, domain.left)
+        bⱼ = min.(xⱼ + hⱼ, domain.right)
+        # Δhⱼ = bⱼ - aⱼ
+        ivals = xⱼ .± hⱼ
+        # ivals = Interval.(aⱼ, bⱼ)
+
+        N = length(xⱼ) + 1
+
+        ϕ = chebyshevt.(d, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
+        # ϕ = chebyshevt.(d, [domain.left..domain.right])
+
+        V = zeros(N - 1, N - 1)
+        f = zeros(N - 1)
+        for k = 1:N-1
+            ival = ivals[k]
+            ϕⱼ = Fun.(ϕ, [ival])
+            kern = Fun(x -> G(x - xⱼ[k]), ival)
+            kern /= sum(kern)
+            V[:, k] = sum.(kern .* ϕⱼ)
+            f[k] = ϕ[k](xᵢ)
+        end
+
+        # rᵢ = V \ f
+        rᵢ = (V'V + sparse(1e-8I, size(V))) \ (V'f)
+
+        # Store weights
+        R[i, j] .= rᵢ[:]
+    end
+
+    R
 end
 
 

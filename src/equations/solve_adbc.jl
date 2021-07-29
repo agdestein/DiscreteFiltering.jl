@@ -56,7 +56,7 @@ function solve_adbc(
         uᵏ⁺¹ .= uᵏ
         uᵏ⁺¹[1] = g_a(tᵏ + Δt)
         uᵏ⁺¹[end] = g_b(tᵏ + Δt)
-
+        
         # Filtered boundary conditions
         ūᵏ⁺¹[1] = w₀'uᵏ⁺¹
         ūᵏ⁺¹[end] = wₙ'uᵏ⁺¹
@@ -87,30 +87,68 @@ function solve_adbc(
     ūᵏ
 end
 
-    # Current approximate unfiltered solution
-    mul!(uᵏ, R, ūᵏ)
 
-    # Next approximate unfiltered solution
-    ũᵏ⁺¹ .= uᵏ
-    ũᵏ⁺¹[1] = g_a(tᵏ + Δt_last)
-    ũᵏ⁺¹[end] = g_b(tᵏ + Δt_last)
+function solve_adbc(
+    equation::DiffusionEquation{ClosedIntervalDomain{T},ConvolutionalFilter},
+    u,
+    tlist,
+    n,
+    Δt = (tlist[2] - tlist[1]) / 1000,
+) where {T}
 
-    # Filtered boundary conditions
-    ūᵏ⁺¹[1] = w₀'ũᵏ⁺¹
-    ūᵏ⁺¹[end] = wₙ'ũᵏ⁺¹
+    @unpack domain, filter, f, g_a, g_b = equation
+    x = discretize(domain, n)
+    Δx = x[2] - x[1]
+    h = filter.width
+    G = filter.kernel
+    a, b = domain.left, domain.right
 
-    # Next inner points for filtered solution
-    ūᵏ⁺¹[2:end-1] .+= (
-        Δt_last .* (
-            D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
-            (abs.(x[2:end-1] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
-            (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
-        )
-    )
+    # Get matrices
+    D = diffusion_matrix(domain, n)
 
-    # Advance by Δt_last
-    tᵏ += Δt_last
-    ūᵏ .= ūᵏ⁺¹
+    # Filter matrix
+    W = filter_matrix(filter, domain, n)
+    R = reconstruction_matrix(filter, domain, n)
+    w₀ = W[1, :]
+    wₙ = W[end, :]
+
+    function perform_step!(ūᵏ, tᵏ, Δt, p)
+        uᵏ, uᵏ⁺¹, ūᵏ⁺¹ = p
+
+        # Current approximate unfiltered solution
+        mul!(uᵏ, R, ūᵏ)
+
+        # Next approximate unfiltered solution
+        uᵏ⁺¹ .= uᵏ
+        uᵏ⁺¹[1] = g_a(tᵏ + Δt)
+        uᵏ⁺¹[end] = g_b(tᵏ + Δt)
+        
+        # Filtered boundary conditions
+        ūᵏ⁺¹[1] = w₀'uᵏ⁺¹
+        ūᵏ⁺¹[end] = wₙ'uᵏ⁺¹
+
+        # Next inner points for filtered solution
+        ūᵏ⁺¹[2:end-1] .+=
+            Δt .* D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
+            Δt .* G.(b .- x[2:end-1]) .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
+            Δt .* G.(x[2:end-1] .- a) .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
+
+        # Advance by Δt
+        ūᵏ .= ūᵏ⁺¹
+    end
+
+    ūᵏ = W * u.(x)
+    p = (copy(ūᵏ), copy(ūᵏ), copy(ūᵏ))
+    tᵏ = tlist[1]
+    while tᵏ + Δt < tlist[2]
+        perform_step!(ūᵏ, tᵏ, Δt, p)
+        tᵏ += Δt
+    end
+
+    # Perform last time step (with adapted step size)
+    Δt_last = tlist[2] - tᵏ
+    perform_step!(ūᵏ, tᵏ, Δt_last, p)
+    tᵏ += Δt
 
     ūᵏ
 end

@@ -73,6 +73,9 @@ function reconstruction_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
 
     degmax = 30
 
+    L = (domain.right - domain.left)
+    mid = (domain.left + domain.right) / 2
+
     x = discretize(domain, n)
     h = f.width
 
@@ -87,7 +90,7 @@ function reconstruction_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
         # Point
         xᵢ = x[i]
 
-        dists = @. abs(xᵢ - x - [-2π 0 2π])
+        dists = @. abs(xᵢ - x - [-L 0 L])
 
         # Move x by 2π * (shifts - 2) to get closer to xᵢ
         mininds = argmin(dists, dims = 2)

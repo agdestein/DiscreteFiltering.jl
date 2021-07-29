@@ -12,7 +12,7 @@ b = 1.0
 domain = ClosedIntervalDomain(a, b)
 
 # Time
-T = 0.05
+T = 1.0#0.05
 
 ## Symbolics
 @variables x t
@@ -33,11 +33,11 @@ f = expand_derivatives(dₜ(u) - dₓₓ(u))
 g_b = substitute(u, Dict(x => b))
 g_a = substitute(u, Dict(x => a))
 
-for sym ∈ [:u, :u_int, :f, :g_b, :g_a]
-    open("output/$sym.tex", "w") do io
-        @eval write($io, latexify($sym))
-    end
-end
+# for sym ∈ [:u, :u_int, :f, :g_b, :g_a]
+#     open("output/$sym.tex", "w") do io
+#         @eval write($io, latexify($sym))
+#     end
+# end
 
 u = eval(build_function(u, x, t))
 u_int = eval(build_function(u_int, x, t))
@@ -51,7 +51,7 @@ g_b = eval(build_function(g_b, t))
 tols = (; abstol = 1e-9, reltol = 1e-8)
 
 # Number of mesh points
-N = floor.(Int, 10 .^ LinRange(1, 3, 10))
+N = floor.(Int, 10 .^ LinRange(1, 4, 5))
 
 # Errors
 err = zeros(length(N))
@@ -64,33 +64,38 @@ err_adbc = zeros(length(N))
     println("Solving for n = $n")
 
     # Discretization
-    Δx = (b - a) / n
-    h(x) = Δx / 2
     x = discretize(domain, n)
+    Δx = (b - a) / n
+
+    # h(x) = Δx / 2
+    # filter = TopHatFilter(h)
+
+    h₀ = 3.1Δx
+    h(x) = h₀ # * (1 - 1 / 2 * cos(x))
+    σ = Δx / 2
+    filter = GaussianFilter(h, σ)
+
+    # Filter matrix
+    W = filter_matrix(filter, domain, n)
 
     # Equations
     equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
-    equation_filtered = DiffusionEquation(domain, TopHatFilter(h), f, g_a, g_b)
+    equation_filtered = DiffusionEquation(domain, filter, f, g_a, g_b)
+
+    if filter isa TopHatFilter
+        u_use = x -> u_int(x, T)
+    else
+        u_use = x -> u(x, T)
+    end
 
     # Exact filtered solution
-    ū(x, t) = begin
-        α = max(a, x - h(x))
-        β = min(b, x + h(x))
-        1 / (β - α) * (u_int(β, t) - u_int(α, t))
-    end
+    ū = apply_filter(u_use, filter, domain)
 
     # Exact extended-filtered solution (for ADBC)
-    ū_ext(x, t) = begin
-        xₗ, xᵣ = x - h(x), x + h(x)
-        1 / 2h(x) * (
-            u_int(min(b, xᵣ), t) - u_int(max(a, xₗ), t) +
-            g_a(t) * max(0.0, a - xₗ) +
-            g_b(t) * max(0.0, xᵣ - b)
-        )
-    end
+    ū_ext = apply_filter_extend(u_use, filter, domain)
 
     # Solve discretized problem
-    sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
+    # sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
 
     # Solve discretized-then-filtered problem
     sol_bar = solve(
@@ -104,17 +109,16 @@ err_adbc = zeros(length(N))
     )
 
     # Solve filtered-then-discretized problem with ADBC
-    ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100000)
+    # ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
 
     # Relative error
     u_exact = u.(x, T)
-    ū_exact = ū.(x, T)
-    ū_ext_exact = ū_ext.(x, T)
-    err[i] = norm(sol(T) - u_exact) / norm(u_exact)
+    ū_exact = ū.(x)
+    ū_ext_exact = ū_ext.(x)
+    # err[i] = norm(sol(T) - u_exact) / norm(u_exact)
     err_bar[i] = norm(sol_bar(T) - ū_exact) / norm(ū_exact)
-    err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
+    # err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
 end
-
 
 ## Set GR backend for fast plotting
 gr()
@@ -132,10 +136,10 @@ display(p)
 savefig(p, "output/solution.tikz")
 
 ## Plot convergence
-p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :bottomleft)
+p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :topright)
 # plot!(p, N, err, label = "Discretized")
 plot!(p, N, err_bar, label = "Discretized-then-filtered")
-plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
+# plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
 # plot!(p, N, 1 ./ N .^ 2)
 # plot!(p, N, 20 ./ N .^ 2, linestyle = :dash, label = raw"$20 n^{-2}$")
 # plot!(p, N, 10 ./ N .^ 1.5, linestyle = :dash, label = raw"$10 n^{-3/2}}$")
@@ -143,4 +147,4 @@ xlabel!(p, raw"$n$")
 # title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
 display(p)
 
-savefig(p, "output/convergence_adbc.tikz")
+# savefig(p, "output/convergence_adbc.tikz")

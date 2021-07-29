@@ -13,17 +13,23 @@ domain = PeriodicIntervalDomain(a, b)
 
 
 ## Discretization
-n = 500
+n = 100
 x = discretize(domain, n)
 Δx = (b - a) / n
 
 
 ## Filter
-h₀ = Δx / 2
-h(x) = h₀# * (1 - 1 / 2 * cos(x))
-dh(x) = 0.0#h₀ / 2 * sin(x)
+# h₀ = Δx / 2
+# h(x) = h₀# * (1 - 1 / 2 * cos(x))
+# dh(x) = 0.0#h₀ / 2 * sin(x)
+# α(x) = 1 / 3 * dh(x) * h(x)
+# f = TopHatFilter(h)
+
+h₀ = 5.1Δx
+h(x) = h₀ # * (1 - 1 / 2 * cos(x))
+dh(x) = 0.0 # h₀ / 2 * sin(x)
 α(x) = 1 / 3 * dh(x) * h(x)
-f = TopHatFilter(h)
+f = GaussianFilter(h, Δx / 2)
 
 
 ## Time
@@ -36,18 +42,11 @@ plot(x, h)
 ylims!((0, ylims()[2]))
 
 
-## Plot α and step size
-plot(x, abs.(α.(x)), label = "|α(x)|")
-plot!([x[1], x[end]], [Δx / 2, Δx / 2], label = "Δx/2")
-
-
 ## Get matrices
 C = advection_matrix(domain, n)
 D = diffusion_matrix(domain, n)
-# W = filter_matrix(f, domain, n)
-# R = reconstruction_matrix(f, domain, n)
-W = filter_matrix_meshwidth(f, domain, n)
-R = reconstruction_matrix_meshwidth(f, domain, n)
+W = filter_matrix(f, domain, n)
+R = reconstruction_matrix(f, domain, n)
 A = spdiagm(α.(x))
 
 ## Inspect matrices
@@ -107,9 +106,9 @@ plot!(x, W * u.(x, t), label = "Exact")
 
 ## Comparison
 plot(x, uₕ, label = "Initial")
-plot!(x, ūₕ, label = "Initial filtered")
+# plot!(x, ūₕ, label = "Initial filtered")
 plot!(x, sol(t), label = "Discretized")
-plot!(x, sol_bar(t), label = "Filtered-then-discretized")
+# plot!(x, sol_bar(t), label = "Filtered-then-discretized")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
 # plot!(x, [u.(x, t), ū.(x, t)], label = "Exact")
 ylims!(minimum(uₕ), maximum(uₕ))

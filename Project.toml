@@ -6,7 +6,7 @@ version = "0.1.0"
 [deps]
 ApproxFun = "28f2ccd6-bb30-5033-b560-165f7b14dc2f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-Intervals = "d8418881-c3e1-53bb-8760-2df7ec849ed5"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NonNegLeastSquares = "b7351bd1-99d9-5c5d-8786-f205a815c4d7"
@@ -21,7 +21,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 Documenter = "0.26, 0.27"
-Intervals = "1"
+IntervalSets = "0.5"
 Latexify = "0.15"
 NonNegLeastSquares = "0.4"
 OrdinaryDiffEq = "5"

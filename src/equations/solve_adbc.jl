@@ -82,7 +82,7 @@ function solve_adbc(
     # Perform last time step (with adapted step size)
     Δt_last = tlist[2] - tᵏ
     perform_step!(ūᵏ, tᵏ, Δt_last, p)
-    tᵏ += Δt
+    tᵏ += Δt_last
 
     ūᵏ
 end
@@ -148,7 +148,7 @@ function solve_adbc(
     # Perform last time step (with adapted step size)
     Δt_last = tlist[2] - tᵏ
     perform_step!(ūᵏ, tᵏ, Δt_last, p)
-    tᵏ += Δt
+    tᵏ += Δt_last
 
     ūᵏ
 end

@@ -42,8 +42,12 @@ function solve(
     if method == "filterfirst"
         F === TopHatFilter ||
             error("Method \"filterfirst\" is only implemented for TopHatFilter")
+        function fix_derivative(y)
+            isnothing(y) ? 0.0 : y
+        end
         h = filter.width
-        dh(x) = 0.0
+        dhh = h'
+        dh(x) = fix_derivative(dhh(x))
         α(x) = 1 / 3 * dh(x) * h(x)
         A = spdiagm(α.(x))
         J = DiffEqArrayOperator(-C + A * D)

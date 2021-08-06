@@ -52,6 +52,8 @@ function apply_filter(u, filter::Filter, domain::Domain)
     error("Not implemented")
 end
 
+apply_filter(u, filter::IdentityFilter, domain::Domain) = u
+
 function apply_filter(u, filter::TopHatFilter, domain::ClosedIntervalDomain)
     h = filter.width
     a, b = domain.left, domain.right

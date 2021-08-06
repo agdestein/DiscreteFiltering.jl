@@ -18,8 +18,11 @@ function solve(
     W = filter_matrix(filter, domain, n)
     R = reconstruction_matrix(filter, domain, n)
 
+    ū = apply_filter(u, filter, domain)
+
     uₕ = u.(x)
-    ūₕ = W * uₕ
+    ūₕ = ū.(x)
+    # ūₕ = W * uₕ
 
     if method == "filterfirst"
         F === TopHatFilter ||
@@ -35,7 +38,7 @@ function solve(
         error("Unknown method")
     end
 
-    problem = ODEProblem(J, W * uₕ, tlist)
+    problem = ODEProblem(J, ūₕ, tlist)
     solution =
         OrdinaryDiffEq.solve(problem, LinearExponential(krylov = :simple, m = subspacedim))
 

@@ -28,19 +28,27 @@ include("equations/equations.jl")
 include("equations/solve.jl")
 include("equations/solve_adbc.jl")
 
+# Domain
 export ClosedIntervalDomain, PeriodicIntervalDomain, discretize
-export IdentityFilter,
-    TopHatFilter,
-    ConvolutionalFilter,
-    GaussianFilter,
-    apply_filter,
-    apply_filter_extend
-export advection_matrix,
-    diffusion_matrix,
-    filter_matrix,
-    filter_matrix_meshwidth,
-    reconstruction_matrix,
-    reconstruction_matrix_meshwidth
+
+# Filter
+export IdentityFilter
+export TopHatFilter
+export ConvolutionalFilter
+export GaussianFilter
+export apply_filter
+export apply_filter_int
+export apply_filter_extend
+
+# Matrix assembly
+export advection_matrix
+export diffusion_matrix
+export filter_matrix
+export filter_matrix_meshwidth
+export reconstruction_matrix
+export reconstruction_matrix_meshwidth
+
+# Equations
 export AdvectionEquation, DiffusionEquation, BurgersEquation, solve, solve_adbc
 
 end

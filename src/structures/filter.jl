@@ -52,29 +52,49 @@ function apply_filter(u, filter::Filter, domain::Domain)
     error("Not implemented")
 end
 
-function apply_filter(u_int, filter::TopHatFilter, domain::ClosedIntervalDomain)
+function apply_filter(u, filter::TopHatFilter, domain::ClosedIntervalDomain)
     h = filter.width
     a, b = domain.left, domain.right
+
+    ufun = Fun(u, domain.left..domain.right)
+    u_int = integrate(ufun)
 
     # Exact filtered solution
     ū(x) = begin
         α = max(a, x - h(x))
         β = min(b, x + h(x))
-        1 / (β - α) * (u_int(β, t) - u_int(α))
+        1 / (β - α) * (u_int(β) - u_int(α))
     end
 
     ū
 end
 
-function apply_filter(u_int, filter::TopHatFilter, domain::PeriodicIntervalDomain)
+function apply_filter(u, filter::TopHatFilter, domain::PeriodicIntervalDomain)
     h = filter.width
     a, b = domain.left, domain.right
+    L = b - a
+
+    ufun = Fun(u, domain.left..domain.right)
+    u_int = integrate(ufun)
+    i(α, β) = u_int(β) - u_int(α)
 
     # Exact filtered solution
     ū(x) = begin
         α = x - h(x)
         β = x + h(x)
-        1 / (β - α) * (u_int(β) - u_int(α))
+
+        xₗ = max(a, α)
+        xᵣ = min(β, b)
+
+        I = i(xₗ, xᵣ)
+        if α < a
+            I += i(α + L, b)
+        end
+        if b < β
+            I += i(a, β - L)
+        end
+
+        I / (β - α)
     end
 
     ū
@@ -116,6 +136,34 @@ function apply_filter(u, filter::ConvolutionalFilter, domain::PeriodicIntervalDo
         Gfun = Fun(ξ -> G(ξ - x), α..β)
 
         sum(Gfun * ufun) / sum(Gfun)
+    end
+
+    ū
+end
+
+function apply_filter_int(u_int, filter::TopHatFilter, domain::ClosedIntervalDomain)
+    h = filter.width
+    a, b = domain.left, domain.right
+
+    # Exact filtered solution
+    ū(x) = begin
+        α = max(a, x - h(x))
+        β = min(b, x + h(x))
+        1 / (β - α) * (u_int(β, t) - u_int(α))
+    end
+
+    ū
+end
+
+function apply_filter_int(u_int, filter::TopHatFilter, domain::PeriodicIntervalDomain)
+    h = filter.width
+    a, b = domain.left, domain.right
+
+    # Exact filtered solution
+    ū(x) = begin
+        α = x - h(x)
+        β = x + h(x)
+        1 / (β - α) * (u_int(β) - u_int(α))
     end
 
     ū

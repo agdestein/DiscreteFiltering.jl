@@ -1,3 +1,18 @@
+"""
+    solve(
+        equation::AdvectionEquation{PeriodicIntervalDomain{T},F},
+        u,
+        tlist,
+        n;
+        method = "filterfirst",
+        subspacedim = 10,
+    ) where {T,F}
+
+Solve `equation` from `tlist[1]` to `tlist[2]` with initial conditions `u` and a
+discretization of `n` points. If `method` is `"filterfirst"`, the equation is filtered then
+discretized. If `method` is `"discretizefirst"`, the equation is discretized then filtered.
+The parameter `subspacedim` controls the accuracy of the linear exponential timestepping.
+"""
 function solve(
     equation::AdvectionEquation{PeriodicIntervalDomain{T},F},
     u,

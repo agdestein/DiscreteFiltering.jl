@@ -125,11 +125,77 @@ function reconstruction_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, 
 end
 
 
+# function reconstruction_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
+#     degmax = 100
+
+#     L = (domain.right - domain.left)
+
+#     h = f.width
+#     x = discretize(domain, n)
+#     R = spzeros(n, n)
+
+#     # Get reconstruction weights for each point
+#     for i = 1:n
+#         # Point
+#         xᵢ = x[i]
+
+#         dists = @. abs(xᵢ - x - [-L 0 L])
+
+#         # Move x by 2π * (shifts - 2) to get closer to xᵢ
+#         mininds = argmin(dists, dims = 2)
+#         shifts = [mininds[j].I[2] for j in eachindex(mininds)]
+
+#         # Find j such that xᵢ is reachable from xⱼ
+#         j = dists[mininds][:] .< h.(x)
+
+#         # Vandermonde matrix
+#         sⱼ = 2π * (shifts[j]' .- 2)
+#         xⱼ = x[j]' + sⱼ
+#         hⱼ = h.(xⱼ)
+
+#         # Polynomial degree (Taylor series order)
+#         deg = sum(j)
+#         # deg = min(degmax, max(1, floor(Int, √sum(j))))
+
+#         # Vandermonde matrix
+#         d = 1:deg
+#         aⱼ = max.(xⱼ - hⱼ, domain.left - 0.001L)
+#         bⱼ = min.(xⱼ + hⱼ, domain.right + 0.001L)
+#         # Δhⱼ = bⱼ - aⱼ
+#         ivals = xⱼ .± hⱼ
+#         # ivals = Interval.(aⱼ, bⱼ)
+
+#         N = length(xⱼ) + 1
+
+#         ϕ = chebyshevt.(d, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
+#         # ϕ = chebyshevt.(d, [domain.left..domain.right])
+
+#         V = zeros(N - 1, N - 1)
+#         f = zeros(N - 1)
+#         for k = 1:N-1
+#             ival = ivals[k]
+#             ϕⱼ = Fun.(ϕ, [ival])
+#             V[:, k] = sum.(ϕⱼ)
+#             f[k] = ϕ[k](xᵢ)
+#         end
+
+#         rᵢ = V \ f
+#         # rᵢ = (V'V + 1e-8I) \ (V'f)
+
+#         # Store weights
+#         R[i, j] .= rᵢ[:] ./ sum(rᵢ)
+#     end
+
+#     R
+# end
+
+
 function reconstruction_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
     degmax = 100
 
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
+    Ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
 
     h = f.width
     G = f.kernel
@@ -151,11 +217,11 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDom
         # deg = min(degmax, max(1, floor(Int, √sum(j))))
 
         # Vandermonde matrix
-        d = 1:deg
+        d = 0:deg-1
         xⱼ = x[j]
         hⱼ = h.(xⱼ)
-        aⱼ = max.(xⱼ - hⱼ, domain.left)
-        bⱼ = min.(xⱼ + hⱼ, domain.right)
+        aⱼ = max.(xⱼ - hⱼ, domain.left - 0.001L)
+        bⱼ = min.(xⱼ + hⱼ, domain.right + 0.001L)
         # Δhⱼ = bⱼ - aⱼ
         ivals = xⱼ .± hⱼ
         # ivals = Interval.(aⱼ, bⱼ)
@@ -163,7 +229,8 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDom
         N = length(xⱼ) + 1
 
         ϕ = chebyshevt.(d, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
-        # ϕ = chebyshevt.(d, [domain.left..domain.right])
+        # ϕ = chebyshevt.(d, [minimum(aⱼ)..maximum(bⱼ)])
+        # ϕ = chebyshevt.(d, [Ival_domain])
 
         V = zeros(N - 1, N - 1)
         f = zeros(N - 1)
@@ -171,13 +238,12 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDom
             ival = ivals[j]
             ϕⱼ = Fun.(ϕ, [ival])
             kern = Fun(x -> G(x - xⱼ[j]), ival)
-            kern /= sum(kern)
-            V[:, j] = sum.(kern .* ϕⱼ)
+            V[:, j] = sum.(kern .* ϕⱼ) / sum(kern)
             f[j] = ϕ[j](xᵢ)
         end
 
-        # rᵢ = V \ f
-        rᵢ = (V'V + sparse(1e-8I, size(V))) \ (V'f)
+        rᵢ = V \ f
+        # rᵢ = (V'V + 1e-8I) \ (V'f)
 
         # Store weights
         R[i, j] .= rᵢ[:] ./ sum(rᵢ)
@@ -208,10 +274,10 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalD
         # Move x by 2π * (shifts - 2) to get closer to xᵢ
         mininds = argmin(dists, dims = 2)
         shifts = [mininds[j].I[2] for j in eachindex(mininds)]
-    
+
         # Find j such that xᵢ is reachable from xⱼ
         j = dists[mininds][:] .< h.(x)
-    
+
         # Vandermonde matrix
         sⱼ = 2π * (shifts[j]' .- 2)
         xⱼ = x[j]' + sⱼ
@@ -223,8 +289,8 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalD
 
         # Vandermonde matrix
         d = 1:deg
-        aⱼ = max.(xⱼ - hⱼ, domain.left)
-        bⱼ = min.(xⱼ + hⱼ, domain.right)
+        aⱼ = max.(xⱼ - hⱼ, domain.left - 0.001L)
+        bⱼ = min.(xⱼ + hⱼ, domain.right + 0.001L)
         # Δhⱼ = bⱼ - aⱼ
         ivals = xⱼ .± hⱼ
         # ivals = Interval.(aⱼ, bⱼ)
@@ -245,8 +311,8 @@ function reconstruction_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalD
             f[k] = ϕ[k](xᵢ)
         end
 
-        # rᵢ = V \ f
-        rᵢ = (V'V + sparse(1e-8I, size(V))) \ (V'f)
+        rᵢ = V \ f
+        # rᵢ = (V'V + 1e-8I) \ (V'f)
 
         # Store weights
         R[i, j] .= rᵢ[:] ./ sum(rᵢ)

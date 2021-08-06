@@ -22,19 +22,16 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     degmax = 100
 
-    Ival_domain = domain.left..domain.right
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
+    Ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
 
     x = discretize(domain, n)
     h = f.width
 
-    if all(h.(x) .≈ h(x[1])) && x[2] - x[1] ≈ 2h(x[1])
+    if all(≈(h(x[1])), h.(x)) && x[2] - x[1] ≈ 2h(x[1])
         return filter_matrix_meshwidth(f, domain, n)
     end
-
-    ϕ = chebyshevt.(0:degmax, [Ival_domain])
-    ϕ_int = integrate.(ϕ)
 
     W = spzeros(n + 1, n + 1)
     for i = 1:n+1
@@ -50,6 +47,9 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         inds = x .∈ [Ival]
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
+        ϕ = chebyshevt(0:deg, Ival)
+        ϕ_int = integrate.(ϕ)
+
         # Polynomials evaluated at integration points
         Vᵢ = zeros(deg + 1, length(x[inds]))
 
@@ -59,12 +59,12 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         # Fill in
         for d = 1:deg+1
             Vᵢ[d, :] = ϕ[d].(x[inds])
-            μᵢ[d] = ϕ_int[d](Ival.right) - ϕ_int[d](Ival.left)
+            μᵢ[d] = (ϕ_int[d](Ival.right) - ϕ_int[d](Ival.left)) / Ival_length
         end
-        μᵢ ./= Ival_length
 
         # Fit weights
-        wᵢ = nonneg_lsq(Vᵢ, μᵢ)
+        wᵢ = Vᵢ \ μᵢ
+        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
 
         # Store weights
         W[i, inds] .= wᵢ[:] ./ sum(wᵢ)
@@ -76,22 +76,21 @@ end
 
 function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
 
-    Ival_domain = domain.left..domain.right
+    degmax = 100
+
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
+    Ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
 
     x = discretize(domain, n)
     h = f.width
 
-    if all(h.(x) .≈ h(x[1])) && x[2] - x[1] .≈ 2h(x[1])
+    if all(≈(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
         return filter_matrix_meshwidth(f, domain, n)
     end
 
-    degmax = 100
-    ϕ = chebyshevt.(0:degmax, [Ival_domain])
-    ϕ_int = integrate.(ϕ)
-
     W = spzeros(n, n)
+
     for i = 1:n
         # Point
         xᵢ = x[i]
@@ -99,38 +98,39 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         # Filter width at point
         hᵢ = h(xᵢ)
 
-        # Indices of integration points in circular reference
-        Ival = xᵢ ± hᵢ
-        inds_left = x .- L .∈ [Ival]
-        inds_mid = x .∈ [Ival]
-        inds_right = x .+ L .∈ [Ival]
-        inds = inds_left .| inds_mid .| inds_right
-        deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
+        # Indices of integration points inside domain
+        Ival = (xᵢ ± hᵢ)
+        indsleft = x .+ L .∈ [Ival]
+        indsmid = x .∈ [Ival]
+        indsright = x .- L .∈ [Ival]
+        j = indsleft .| indsmid .| indsright
+        xⱼ = (x + L * indsleft - L * indsright)[j]
+        n = length(xⱼ)
+
+        # deg = min(degmax, max(1, floor(Int, √(n - 1))))
+        deg = min(degmax, sum(j))
+        ϕ = chebyshevt(0:deg, Ival)
+        ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = zeros(deg + 1, length(x[inds]))
+        Vᵢ = zeros(deg + 1, n)
 
         # Polynomial moments around point
-        I_left = Interval((endpoints(Ival) .+ L)...) ∩ Ival_domain
-        I_mid = Ival ∩ Ival_domain
-        I_right = Interval((endpoints(Ival) .- L)...) ∩ Ival_domain
+        μᵢ = zeros(deg + 1)
 
         # Fill in
-        μᵢ = zeros(deg + 1)
         for d = 1:deg+1
-            Vᵢ[d, :] = ϕ[d].(x[inds])
-            μᵢ[d] += ϕ_int[d](I_left.right) - ϕ_int[d](I_left.left)
-            μᵢ[d] += ϕ_int[d](I_mid.right) - ϕ_int[d](I_mid.left)
-            μᵢ[d] += ϕ_int[d](I_right.right) - ϕ_int[d](I_right.left)
+            Vᵢ[d, :] = ϕ[d].(xⱼ)
+            μᵢ[d] = (ϕ_int[d](Ival.right) - ϕ_int[d](Ival.left)) / 2hᵢ
         end
-        μᵢ ./= 2hᵢ
 
         # Fit weights
-        wᵢ = nonneg_lsq(Vᵢ, μᵢ)
-        # wᵢ = Vᵢ \ μᵢ
+        wᵢ = Vᵢ \ μᵢ
+        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
+        # wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, n, n)) \ Vᵢ'μᵢ
 
         # Store weights
-        W[i, inds] .= wᵢ[:] ./ sum(wᵢ)
+        W[i, j] .= wᵢ[:] ./ sum(wᵢ)
     end
 
     W
@@ -143,6 +143,7 @@ function filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
 
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
+    Ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
 
     h = f.width
     G = f.kernel
@@ -157,7 +158,7 @@ function filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domaain
-        Ival = (xᵢ ± hᵢ)# ∩ (domain.left..domain.right)
+        Ival = (xᵢ ± hᵢ)# ∩ Ival_domain
         j = x .∈ [Ival]
         xⱼ = x[j]
         n = length(xⱼ)
@@ -219,7 +220,7 @@ function filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n
         indsmid = x .∈ [Ival]
         indsright = x .- L .∈ [Ival]
         j = indsleft .| indsmid .| indsright
-        xⱼ = (x + L * indsleft - L * indsright)[j]
+        xⱼ = (x+L*indsleft-L*indsright)[j]
         n = length(xⱼ)
 
         # deg = min(degmax, max(1, floor(Int, √(n - 1))))
@@ -269,7 +270,7 @@ function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain
     h = f.width
     h₀ = h(x[1])
 
-    all(h.(x) .≈ h(x[1])) || error("Filter width must be constant")
+    all(≈(h(x[1])), h.(x)) || error("Filter width must be constant")
     Δx .≈ 2h₀ || error("Filter width must be equal to mesh width")
 
     # Three point stencil
@@ -306,7 +307,7 @@ function filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, 
     h = f.width
     h₀ = h(x[1])
 
-    all(h.(x) .≈ h(x[1])) || error("Filter width must be constant")
+    all(≈(h(x[1])), h.(x)) || error("Filter width must be constant")
     Δx ≈ 2h₀ || error("Filter width must be equal to mesh width")
 
     # Three point stencil

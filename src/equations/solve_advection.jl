@@ -51,15 +51,26 @@ function solve(
         α(x) = 1 / 3 * dh(x) * h(x)
         A = spdiagm(α.(x))
         J = DiffEqArrayOperator(-C + A * D)
+
+
+        problem = ODEProblem(J, ūₕ, tlist)
+        solution = OrdinaryDiffEq.solve(
+            problem,
+            LinearExponential(krylov = :simple, m = subspacedim),
+        )
     elseif method == "discretizefirst"
-        J = DiffEqArrayOperator(-W * C * R)
+        p = (; J = -W * C * R)
+        Mdu!(du, u, p, t) = mul!(du, p.J, u)
+        odefunction = ODEFunction(
+            Mdu!,
+            jac = (J, u, p, t) -> (J .= p.J),
+            jac_prototype = p.J,
+            mass_matrix = W * R,
+        )
+        problem = ODEProblem(odefunction, ūₕ, tlist, p)
+        solution = OrdinaryDiffEq.solve(problem, QNDF(); abstol = 1e-10, reltol = 1e-8)
     else
         error("Unknown method")
     end
-
-    problem = ODEProblem(J, ūₕ, tlist)
-    solution =
-        OrdinaryDiffEq.solve(problem, LinearExponential(krylov = :simple, m = subspacedim))
-
     solution
 end

@@ -70,12 +70,8 @@ function solve(
         J = D
         J[[1, end], :] .= 0
         dropzeros!(D)
-        function derivative(f)
-            df = f'
-            t -> isnothing(df(t)) ? 0.0 : df(t)
-        end
-        γ_a = derivative(g_a)
-        γ_b = derivative(g_b)
+        γ_a(t) = ForwardDiff.derivative(g_a, t)
+        γ_b(t) = ForwardDiff.derivative(g_b, t)
     else
         error("Unknown boundary conditions")
     end

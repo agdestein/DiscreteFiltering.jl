@@ -46,8 +46,7 @@ function solve(
             isnothing(y) ? 0.0 : y
         end
         h = filter.width
-        dhh = h'
-        dh(x) = fix_derivative(dhh(x))
+        dh(x) = ForwardDiff.derivative(h, x)
         α(x) = 1 / 3 * dh(x) * h(x)
         A = spdiagm(α.(x))
         J = DiffEqArrayOperator(-C + A * D)

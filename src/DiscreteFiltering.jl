@@ -2,6 +2,7 @@
 module DiscreteFiltering
 
 using ApproxFun: Fun, chebyshevt, integrate
+using ForwardDiff
 using IntervalSets
 using LinearAlgebra
 using OrdinaryDiffEq:
@@ -9,7 +10,6 @@ using OrdinaryDiffEq:
 using Parameters
 using SparseArrays
 using NonNegLeastSquares
-using Zygote
 
 # Domain
 include("structures/domain.jl")

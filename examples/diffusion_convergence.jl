@@ -12,7 +12,7 @@ b = 1.0
 domain = ClosedIntervalDomain(a, b)
 
 # Time
-T = 1.0#0.05
+T = 0.05
 
 ## Symbolics
 @variables x t
@@ -51,7 +51,7 @@ g_b = eval(build_function(g_b, t))
 tols = (; abstol = 1e-9, reltol = 1e-8)
 
 # Number of mesh points
-N = floor.(Int, 10 .^ LinRange(1, 4, 5))
+N = floor.(Int, 10 .^ LinRange(2, 4, 5))
 
 # Errors
 err = zeros(length(N))
@@ -109,7 +109,7 @@ err_adbc = zeros(length(N))
     )
 
     # Solve filtered-then-discretized problem with ADBC
-    # ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
+    ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
 
     # Relative error
     u_exact = u.(x, T)
@@ -117,7 +117,7 @@ err_adbc = zeros(length(N))
     ū_ext_exact = ū_ext.(x)
     # err[i] = norm(sol(T) - u_exact) / norm(u_exact)
     err_bar[i] = norm(sol_bar(T) - ū_exact) / norm(ū_exact)
-    # err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
+    err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
 end
 
 ## Set GR backend for fast plotting
@@ -139,7 +139,7 @@ savefig(p, "output/solution.tikz")
 p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :topright)
 # plot!(p, N, err, label = "Discretized")
 plot!(p, N, err_bar, label = "Discretized-then-filtered")
-# plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
+plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
 # plot!(p, N, 1 ./ N .^ 2)
 # plot!(p, N, 20 ./ N .^ 2, linestyle = :dash, label = raw"$20 n^{-2}$")
 # plot!(p, N, 10 ./ N .^ 1.5, linestyle = :dash, label = raw"$10 n^{-3/2}}$")

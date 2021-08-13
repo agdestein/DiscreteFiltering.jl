@@ -19,21 +19,21 @@ x = discretize(domain, n)
 
 
 ## Filter
-# h₀ = Δx / 2
-# h(x) = h₀# * (1 - 1 / 2 * cos(x))
-# dh(x) = 0.0#h₀ / 2 * sin(x)
-# α(x) = 1 / 3 * dh(x) * h(x)
-# f = TopHatFilter(h)
-
-h₀ = 5.1Δx
-h(x) = h₀ # * (1 - 1 / 2 * cos(x))
-dh(x) = 0.0 # h₀ / 2 * sin(x)
+h₀ = 2.1Δx
+h(x) = h₀ * (1 - 1 / 2 * cos(x))
+dh(x) = h₀ / 2 * sin(x)
 α(x) = 1 / 3 * dh(x) * h(x)
-f = GaussianFilter(h, Δx / 2)
+f = TopHatFilter(h)
+
+# h₀ = 5.1Δx
+# h(x) = h₀ # * (1 - 1 / 2 * cos(x))
+# dh(x) = 0.0 # h₀ / 2 * sin(x)
+# α(x) = 1 / 3 * dh(x) * h(x)
+# f = GaussianFilter(h, Δx / 2)
 
 
 ## Time
-T = 1.0
+T = 1.5
 t = T
 
 
@@ -55,8 +55,8 @@ spy(R)
 
 
 ## Exact solutions
-u(x, t) = sin(x - t) + 0.6cos(5(x - t)) + 0.04sin(20(x - 1 - t))
-u_int(x, t) = -cos(x - t) + 0.6 / 5 * sin(5(x - t)) - 0.04 / 20 * cos(20(x - 1 - t))
+u(x, t) = sin(x - t) + 3 / 5 * cos(5(x - t)) + 1 / 25 * sin(20(x - 1 - t))
+u_int(x, t) = -cos(x - t) + 3 / 25 * sin(5(x - t)) - 1 / 25 / 20 * cos(20(x - 1 - t))
 ū(x, t) = 1 / 2h(x) * (u_int(x + h(x), t) - u_int(x - h(x), t))
 
 
@@ -103,15 +103,22 @@ plot!(x, uₕ_allbar, label = "Initial discretized-then-filtered")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
 plot!(x, W * u.(x, t), label = "Exact")
 
+## PGFPlotsX
+pgfplotsx()
 
 ## Comparison
-plot(x, uₕ, label = "Initial")
-# plot!(x, ūₕ, label = "Initial filtered")
-plot!(x, sol(t), label = "Discretized")
-# plot!(x, sol_bar(t), label = "Filtered-then-discretized")
-plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
-# plot!(x, [u.(x, t), ū.(x, t)], label = "Exact")
-ylims!(minimum(uₕ), maximum(uₕ))
+p = plot(size = (400, 300), xlabel = "\$x\$", legend = :topright)
+plot!(p, x, uₕ, label = "\$u(x, t = 0.0)\$")
+# plot!(p, x, ūₕ, label = "Initial filtered")
+# plot!(p, x, sol(t), label = "Discretized")
+# plot!(p, x, sol_bar(t), label = "Filtered-then-discretized")
+# plot!(p, x, sol_allbar(t), label = "Discretized-then-filtered")
+# plot!(p, x, [u.(x, t), ū.(x, t)], label = "Exact")
+plot!(p, x, u.(x, t), label = "\$u(x, t = $t)\$")
+plot!(p, x, ū.(x, t), label = "\$\\bar\{u\}, t = $t)\$")
+# ylims!(p, minimum(uₕ), maximum(uₕ))
+display(p)
+savefig(p, "output/advection/solution.tikz")
 
 
 ## Relative error

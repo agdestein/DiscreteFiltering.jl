@@ -11,7 +11,7 @@ b = 1.0
 domain = ClosedIntervalDomain(a, b)
 
 # Time
-T = 1.0
+T = 1#0.05
 
 ## Symbolics
 @variables x t
@@ -50,13 +50,23 @@ g_b = eval(build_function(g_b, t))
 tols = (; abstol = 1e-9, reltol = 1e-8)
 
 # Number of mesh points
-n = 100
+n = 500
+x = discretize(domain, n)
+Δx = (b - a) / n
 
 # Discretization
-Δx = (b - a) / n
-h(x) = Δx / 2
-filter = TopHatFilter(h)
-x = discretize(domain, n)
+# h(x) = Δx / 2
+# filter = TopHatFilter(h)
+
+h₀ = 3.1Δx
+h(x) = h₀ # * (1 - 1 / 2 * cos(x))
+σ = Δx / 2
+filter = GaussianFilter(h, σ)
+if filter isa TopHatFilter
+    u_use = u_int
+else
+    u_use = u
+end
 
 # Filter matrix
 W = filter_matrix(filter, domain, n)
@@ -66,26 +76,13 @@ equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
 equation_filtered = DiffusionEquation(domain, filter, f, g_a, g_b)
 
 # Exact filtered solution
-ū(x, t) = begin
-    α = max(a, x - h(x))
-    β = min(b, x + h(x))
-    1 / (β - α) * (u_int(β, t) - u_int(α, t))
-end
+ū = (x, t) -> apply_filter(x -> u_use(x, t), filter, domain)(x)
+ū_ext = (x, t) -> apply_filter_extend(x -> u_use(x, t), filter, domain)(x)
 
-# Exact extended-filtered solution (for ADBC)
-ū_ext(x, t) = begin
-    xₗ, xᵣ = x - h(x), x + h(x)
-    1 / 2h(x) * (
-        u_int(min(b, xᵣ), t) - u_int(max(a, xₗ), t) +
-        g_a(t) * max(0.0, a - xₗ) +
-        g_b(t) * max(0.0, xᵣ - b)
-    )
-end
-
-# Solve discretized problem
+## Solve discretized problem
 # sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
 
-# Solve discretized-then-filtered problem
+## Solve discretized-then-filtered problem
 sol_bar = solve(
     equation_filtered,
     x -> u(x, 0.0),
@@ -96,12 +93,11 @@ sol_bar = solve(
     tols...,
 )
 
-# Solve filtered-then-discretized problem with ADBC
-# ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
+## Solve filtered-then-discretized problem with ADBC
+ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
 
-# Relative error
+## Relative error
 u_exact = u.(x, T)
-ū_exact = ū.(x, T)
 ū_ext_exact = ū_ext.(x, T)
 # err = t -> norm(sol(t) - u.(x, t)) /maximum(abs.(u.(x, t)))
 err_bar = t -> abs.(sol_bar(t) - ū.(x, t)) / maximum(abs.(ū.(x, t)))
@@ -116,17 +112,17 @@ pgfplotsx()
 
 ## Plot exact solution
 p = plot(xlabel = raw"$x$", size = (400, 300), legend = :topright)
-for t ∈ LinRange(0.0, T, 5)
+for t ∈ LinRange(0.0, T, 2)
     plot!(p, LinRange(0, 1, 101), x -> u.(x, t), label = "\$t = $t\$")
 end
 display(p)
-# savefig(p, "output/solution.tikz")
+savefig(p, "output/diffusion/solution.tikz")
 
 ## Plot error
 p = plot(xlabel = raw"$x$", size = (400, 300), legend = :topright)
 plot!(p, x, err_bar(T), label = "Discretized-then-filtered")
 display(p)
-# savefig(p, "output/solution.tikz")
+# savefig(p, "output/diffusion/error.tikz")
 
 ## Initial error
 p = plot(xlabel = raw"$x$", size = (400, 300), legend = :topright)

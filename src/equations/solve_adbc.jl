@@ -56,7 +56,7 @@ function solve_adbc(
         uᵏ⁺¹ .= uᵏ
         uᵏ⁺¹[1] = g_a(tᵏ + Δt)
         uᵏ⁺¹[end] = g_b(tᵏ + Δt)
-        
+
         # Filtered boundary conditions
         ūᵏ⁺¹[1] = w₀'uᵏ⁺¹
         ūᵏ⁺¹[end] = wₙ'uᵏ⁺¹
@@ -122,7 +122,7 @@ function solve_adbc(
         uᵏ⁺¹ .= uᵏ
         uᵏ⁺¹[1] = g_a(tᵏ + Δt)
         uᵏ⁺¹[end] = g_b(tᵏ + Δt)
-        
+
         # Filtered boundary conditions
         ūᵏ⁺¹[1] = w₀'uᵏ⁺¹
         ūᵏ⁺¹[end] = wₙ'uᵏ⁺¹

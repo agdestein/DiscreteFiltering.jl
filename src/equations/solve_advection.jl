@@ -6,6 +6,9 @@
         n;
         method = "filterfirst",
         subspacedim = 10,
+        solver = QNDF(),
+        reltol = 1e-4,
+        abstol = 1e-6,
     ) where {T,F}
 
 Solve `equation` from `tlist[1]` to `tlist[2]` with initial conditions `u` and a
@@ -20,6 +23,9 @@ function solve(
     n;
     method = "filterfirst",
     subspacedim = 10,
+    solver = QNDF(),
+    reltol = 1e-4,
+    abstol = 1e-6,
 ) where {T,F}
 
     @unpack domain, filter = equation
@@ -67,7 +73,7 @@ function solve(
             mass_matrix = W * R,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
-        solution = OrdinaryDiffEq.solve(problem, QNDF(); abstol = 1e-10, reltol = 1e-8)
+        solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
     else
         error("Unknown method")
     end

@@ -5,10 +5,10 @@
     T = 1.0
 
     # Exact solutions
-    u(x, t) = sin(x - t) + 0.6cos(5(x - t)) + 0.04sin(20(x - 1 - t))
-    u_int(x, t) = -cos(x - t) + 0.6 / 5 * sin(5(x - t)) - 0.04 / 20 * cos(20(x - 1 - t))
+    u(x, t) = sin(x - t) + 3 / 5 * cos(5(x - t)) + 1 / 25 * sin(20(x - 1 - t))
+    u_int(x, t) = -cos(x - t) + 3 / 25 * sin(5(x - t)) - 1 / 25 / 20 * cos(20(x - 1 - t))
 
-    params = (; subspacedim = 20)
+    params = (; subspacedim = 50, reltol = 1e-7, abstol = 1e-9)
 
     # Number of mesh points
     N = floor.(Int, 10 .^ LinRange(2.5, 4.0, 4))

@@ -84,7 +84,8 @@ err_allbar = zeros(length(N))
         (0.0, T),
         n;
         method = "discretizefirst",
-        subspacedim,
+        reltol = 1e-8,
+        abstol = 1e-10,
     )
 
     W = filter_matrix(f, domain, n)

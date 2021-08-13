@@ -24,7 +24,7 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
 
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    Ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
+    ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
 
     x = discretize(domain, n)
     h = f.width
@@ -42,12 +42,12 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domaain
-        Ival = (xᵢ ± hᵢ) ∩ Ival_domain
-        Ival_length = Ival.right - Ival.left
-        inds = x .∈ [Ival]
+        ival = (xᵢ ± hᵢ) ∩ ival_domain
+        ival_length = ival.right - ival.left
+        inds = x .∈ [ival]
         deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
 
-        ϕ = chebyshevt(0:deg, Ival)
+        ϕ = chebyshevt(0:deg, ival)
         ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
@@ -59,7 +59,7 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n)
         # Fill in
         for d = 1:deg+1
             Vᵢ[d, :] = ϕ[d].(x[inds])
-            μᵢ[d] = (ϕ_int[d](Ival.right) - ϕ_int[d](Ival.left)) / Ival_length
+            μᵢ[d] = (ϕ_int[d](ival.right) - ϕ_int[d](ival.left)) / ival_length
         end
 
         # Fit weights
@@ -80,7 +80,7 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
 
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    Ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
+    ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
 
     x = discretize(domain, n)
     h = f.width
@@ -99,21 +99,26 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domain
-        Ival = (xᵢ ± hᵢ)
-        indsleft = x .+ L .∈ [Ival]
-        indsmid = x .∈ [Ival]
-        indsright = x .- L .∈ [Ival]
+        ival = (xᵢ ± hᵢ)
+        # indsleft = x .+ L .∈ [ival]
+        # indsmid = x .∈ [ival]
+        # indsright = x .- L .∈ [ival]
+        indsleft = x .+ L .∈ [ival]
+        indsmid = x .∈ [ival]
+        indsright = x .- L .∈ [ival]
         j = indsleft .| indsmid .| indsright
-        xⱼ = (x + L * indsleft - L * indsright)[j]
-        n = length(xⱼ)
+        j = mapreduce(s -> circshift(j, s), .|, [-1, 0, 1])
+        xⱼ = (x.+(xᵢ.-x.>L/2)L.-(x.-xᵢ.>L/2)L)[j]
+        N = length(xⱼ)
 
         # deg = min(degmax, max(1, floor(Int, √(n - 1))))
-        deg = min(degmax, sum(j))
-        ϕ = chebyshevt(0:deg, Ival)
+        deg = min(degmax, N - 1)
+        # ϕ = chebyshevt(0:deg, ival)
+        ϕ = chebyshevt(0:deg, xᵢ ± 3hᵢ)
         ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = zeros(deg + 1, n)
+        Vᵢ = zeros(deg + 1, N)
 
         # Polynomial moments around point
         μᵢ = zeros(deg + 1)
@@ -121,12 +126,12 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
         # Fill in
         for d = 1:deg+1
             Vᵢ[d, :] = ϕ[d].(xⱼ)
-            μᵢ[d] = (ϕ_int[d](Ival.right) - ϕ_int[d](Ival.left)) / 2hᵢ
+            μᵢ[d] = (ϕ_int[d](ival.right) - ϕ_int[d](ival.left)) / 2hᵢ
         end
 
         # Fit weights
-        wᵢ = Vᵢ \ μᵢ
-        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
+        # wᵢ = Vᵢ \ μᵢ
+        wᵢ = nonneg_lsq(Vᵢ, μᵢ)
         # wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, n, n)) \ Vᵢ'μᵢ
 
         # Store weights
@@ -143,7 +148,7 @@ function filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
 
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    Ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
+    ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
 
     h = f.width
     G = f.kernel
@@ -158,17 +163,17 @@ function filter_matrix(f::ConvolutionalFilter, domain::ClosedIntervalDomain, n)
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domaain
-        Ival = (xᵢ ± hᵢ)# ∩ Ival_domain
-        j = x .∈ [Ival]
+        ival = (xᵢ ± hᵢ)# ∩ ival_domain
+        j = x .∈ [ival]
         xⱼ = x[j]
         n = length(xⱼ)
 
         # deg = min(degmax, max(1, floor(Int, √(n - 1))))
         deg = min(degmax, n)
-        ϕ = chebyshevt(0:deg, Ival)
+        ϕ = chebyshevt(0:deg, ival)
 
         # Normalized kernel Fun
-        kern = Fun(x -> G(x - xᵢ), Ival)
+        kern = Fun(x -> G(x - xᵢ), ival)
         kern /= sum(kern)
 
         # Polynomials evaluated at integration points
@@ -215,20 +220,20 @@ function filter_matrix(f::ConvolutionalFilter, domain::PeriodicIntervalDomain, n
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domaain
-        Ival = (xᵢ ± hᵢ)
-        indsleft = x .+ L .∈ [Ival]
-        indsmid = x .∈ [Ival]
-        indsright = x .- L .∈ [Ival]
+        ival = (xᵢ ± hᵢ)
+        indsleft = x .+ L .∈ [ival]
+        indsmid = x .∈ [ival]
+        indsright = x .- L .∈ [ival]
         j = indsleft .| indsmid .| indsright
         xⱼ = (x+L*indsleft-L*indsright)[j]
         n = length(xⱼ)
 
         # deg = min(degmax, max(1, floor(Int, √(n - 1))))
         deg = min(degmax, sum(j))
-        ϕ = chebyshevt(0:deg, Ival)
+        ϕ = chebyshevt(0:deg, ival)
 
         # Normalized kernel Fun
-        kern = Fun(x -> G(x - xᵢ), Ival)
+        kern = Fun(x -> G(x - xᵢ), ival)
         kern /= sum(kern)
 
         # Polynomials evaluated at integration points

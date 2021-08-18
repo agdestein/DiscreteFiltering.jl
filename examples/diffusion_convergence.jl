@@ -12,7 +12,7 @@ b = 1.0
 domain = ClosedIntervalDomain(a, b)
 
 # Time
-T = 0.05
+T = 1.0
 
 ## Symbolics
 @variables x t
@@ -75,18 +75,11 @@ err_adbc = zeros(length(N))
     σ = Δx / 2
     filter = GaussianFilter(h, σ)
 
-    # Filter matrix
-    W = filter_matrix(filter, domain, n)
-
     # Equations
     equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
     equation_filtered = DiffusionEquation(domain, filter, f, g_a, g_b)
 
-    if filter isa TopHatFilter
-        u_use = x -> u_int(x, T)
-    else
-        u_use = x -> u(x, T)
-    end
+    u_use = x -> u(x, T)
 
     # Exact filtered solution
     ū = apply_filter(u_use, filter, domain)
@@ -95,7 +88,15 @@ err_adbc = zeros(length(N))
     ū_ext = apply_filter_extend(u_use, filter, domain)
 
     # Solve discretized problem
-    # sol = solve(equation, x -> u(x, 0.0), (0.0, T), n; method = "discretizefirst", tols...)
+    # sol = solve(
+    #     equation,
+    #     x -> u(x, 0.0),
+    #     (0.0, T),
+    #     n;
+    #     method = "discretizefirst",
+    #     boundary_conditions = "derivative",
+    #     tols...,
+    # )
 
     # Solve discretized-then-filtered problem
     sol_bar = solve(
@@ -109,15 +110,15 @@ err_adbc = zeros(length(N))
     )
 
     # Solve filtered-then-discretized problem with ADBC
-    ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
+    # ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
 
     # Relative error
     u_exact = u.(x, T)
     ū_exact = ū.(x)
     ū_ext_exact = ū_ext.(x)
-    # err[i] = norm(sol(T) - u_exact) / norm(u_exact)
-    err_bar[i] = norm(sol_bar(T) - ū_exact) / norm(ū_exact)
-    err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
+    # err[i] = norm(sol(T) - u_exact) / norm(u_ exact)
+    err_bar[i] = norm(sol_bar.u[end] - ū_exact) / norm(ū_exact)
+    # err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
 end
 
 ## Set GR backend for fast plotting
@@ -133,17 +134,23 @@ for t ∈ LinRange(0.0, T, 5)
     plot!(p, x, u.(x, t), label = "\$t = $t\$")
 end
 display(p)
-savefig(p, "output/solution.tikz")
+# savefig(p, "output/solution.tikz")
 
 ## Plot convergence
-p = plot(xaxis = :log, yaxis = :log, size = (400, 300), legend = :topright)
+p = plot(
+    xaxis = :log10,
+    yaxis = :log10,
+    size = (400, 300),
+    minorgrid = true,
+    legend = :topright,
+)
 # plot!(p, N, err, label = "Discretized")
 plot!(p, N, err_bar, label = "Discretized-then-filtered")
 plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
-# plot!(p, N, 1 ./ N .^ 2)
+plot!(p, N, 40 ./ N .^ 2, label = "\$40 / N^2\$")
 # plot!(p, N, 20 ./ N .^ 2, linestyle = :dash, label = raw"$20 n^{-2}$")
 # plot!(p, N, 10 ./ N .^ 1.5, linestyle = :dash, label = raw"$10 n^{-3/2}}$")
-xlabel!(p, raw"$n$")
+xlabel!(p, raw"$N$")
 # title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
 display(p)
 

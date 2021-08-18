@@ -55,7 +55,7 @@ err_allbar = zeros(length(N))
 
     # Equations
     equation = AdvectionEquation(domain, IdentityFilter())
-    equation_filtered = AdvectionEquation(domain, TopHatFilter(h))
+    equation_filtered = AdvectionEquation(domain, f)
 
     # Solve discretized problem
     # sol = solve(

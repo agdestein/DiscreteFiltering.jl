@@ -21,7 +21,9 @@ include("structures/filter.jl")
 include("matrices/advection_matrix.jl")
 include("matrices/diffusion_matrix.jl")
 include("matrices/filter_matrix.jl")
+include("matrices/filter_matrix_meshwidth.jl")
 include("matrices/reconstruction_matrix.jl")
+include("matrices/reconstruction_matrix_meshwidth.jl")
 
 # Equations
 include("equations/equations.jl")

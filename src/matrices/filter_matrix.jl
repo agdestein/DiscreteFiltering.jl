@@ -38,7 +38,7 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n, degmax 
         ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = zeros(deg + 1, length(x[inds]))
+        Vᵢ = spzeros(deg + 1, length(x[inds]))
 
         # Polynomial moments around point
         μᵢ = zeros(deg + 1)
@@ -101,7 +101,7 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n, degma
         ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = zeros(deg + 1, N)
+        Vᵢ = spzeros(deg + 1, N)
 
         # Polynomial moments around point
         μᵢ = zeros(deg + 1)
@@ -163,7 +163,7 @@ function filter_matrix(
         μᵢ = sum.(kern .* ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = zeros(deg + 1, N)
+        Vᵢ = spzeros(deg + 1, N)
         for d = 1:deg+1
             Vᵢ[d, :] = ϕ[d].(xⱼ)
         end
@@ -218,7 +218,7 @@ function filter_matrix(
         kern /= sum(kern)
 
         # Polynomials evaluated at integration points
-        Vᵢ = zeros(deg + 1, N)
+        Vᵢ = spzeros(deg + 1, N)
 
         # Polynomial moments around point
         μᵢ = zeros(deg + 1)

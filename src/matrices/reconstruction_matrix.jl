@@ -164,8 +164,8 @@ function reconstruction_matrix(
         # ϕ = chebyshevt.(0:deg, [domain.left..domain.right])
         ϕ_int = integrate.(ϕ)
 
-        Z = sparse(deg + 1, N)
-        v = sparse(deg + 1)
+        Z = spzeros(deg + 1, N)
+        v = spzeros(deg + 1)
         for k = 1:(deg+1)
             for ival ∈ ivals
                 Z[k, :] =
@@ -230,7 +230,7 @@ function reconstruction_matrix(
         v = [ϕ(xᵢ) for ϕ ∈ ϕ]
 
         # Moment matrix
-        Z = zeros(deg + 1, N)
+        Z = spzeros(deg + 1, N)
         for k = 1:N
             ival = ivals[k]
             ϕₖ = Fun.(ϕ, [ival])
@@ -298,7 +298,7 @@ function reconstruction_matrix(
         ϕ = chebyshevt.(d, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
         # ϕ = chebyshevt.(d, [domain.left..domain.right])
 
-        Z = zeros(deg + 1, N)
+        Z = spzeros(deg + 1, N)
         v = zeros(deg + 1)
         for k = 1:N-1
             ival = ivals[k]

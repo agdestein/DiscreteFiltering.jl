@@ -48,11 +48,9 @@ GaussianFilter(σ) = GaussianFilter(x -> 10σ, σ)
 
 Apply `filter` to a spatial function `u` defined on `domain`.
 """
-function apply_filter(u, filter::Filter, domain::Domain)
-    error("Not implemented")
-end
+function apply_filter end
 
-apply_filter(u, filter::IdentityFilter, domain::Domain) = u
+apply_filter(u, ::IdentityFilter, ::Domain) = u
 
 function apply_filter(u, filter::TopHatFilter, domain::ClosedIntervalDomain)
     h = filter.width
@@ -62,7 +60,7 @@ function apply_filter(u, filter::TopHatFilter, domain::ClosedIntervalDomain)
     u_int = integrate(ufun)
 
     # Exact filtered solution
-    ū(x) = begin
+    function ū(x)
         α = max(a, x - h(x))
         β = min(b, x + h(x))
         1 / (β - α) * (u_int(β) - u_int(α))
@@ -81,7 +79,7 @@ function apply_filter(u, filter::TopHatFilter, domain::PeriodicIntervalDomain)
     i(α, β) = u_int(β) - u_int(α)
 
     # Exact filtered solution
-    ū(x) = begin
+    function ū(x)
         α = x - h(x)
         β = x + h(x)
 
@@ -108,7 +106,7 @@ function apply_filter(u, filter::ConvolutionalFilter, domain::ClosedIntervalDoma
     a, b = domain.left, domain.right
 
     # Exact filtered solution
-    ū(x) = begin
+    function ū(x)
         α = max(a, x - h(x))
         β = min(b, x + h(x))
 
@@ -128,7 +126,7 @@ function apply_filter(u, filter::ConvolutionalFilter, domain::PeriodicIntervalDo
     L = b - a
 
     # Exact filtered solution
-    ū(x) = begin
+    function ū(x)
         α = x - h(x)
         β = x + h(x)
 
@@ -148,7 +146,7 @@ function apply_filter_int(u_int, filter::TopHatFilter, domain::ClosedIntervalDom
     a, b = domain.left, domain.right
 
     # Exact filtered solution
-    ū(x) = begin
+    function ū(x)
         α = max(a, x - h(x))
         β = min(b, x + h(x))
         1 / (β - α) * (u_int(β, t) - u_int(α))
@@ -162,7 +160,7 @@ function apply_filter_int(u_int, filter::TopHatFilter, domain::PeriodicIntervalD
     a, b = domain.left, domain.right
 
     # Exact filtered solution
-    ū(x) = begin
+    function ū(x)
         α = x - h(x)
         β = x + h(x)
         1 / (β - α) * (u_int(β) - u_int(α))
@@ -185,7 +183,7 @@ function apply_filter_extend(u_int, filter::TopHatFilter, domain::ClosedInterval
     h = filter.width
     a, b = domain.left, domain.right
 
-    ū_ext(x, t) = begin
+    function ū_ext(x, t)
         xₗ, xᵣ = x - h(x), x + h(x)
         1 / 2h(x) * (
             u_int(min(b, xᵣ), t) - u_int(max(a, xₗ), t) +
@@ -209,7 +207,7 @@ function apply_filter_extend(u, filter::ConvolutionalFilter, domain::ClosedInter
     a, b = domain.left, domain.right
 
     # Exact filtered solution
-    ū_ext(x) = begin
+    function ū_ext(x)
         xₗ, xᵣ = x - h(x), x + h(x)
 
         u_ext(x) = x < a ? u(a) : (x < b ? u(x) : u(b))

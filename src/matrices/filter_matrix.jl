@@ -9,10 +9,11 @@ filter_matrix(::IdentityFilter, ::ClosedIntervalDomain, n) = sparse(I, n + 1, n 
 filter_matrix(::IdentityFilter, ::PeriodicIntervalDomain, n) = sparse(I, n, n)
 
 function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n, degmax = 100)
+    x = discretize(domain, n)
+    Δx = x[2] - x[1]
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
-    x = discretize(domain, n)
+    ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
 
     if all(≈(h(x[1])), h.(x)) && x[2] - x[1] ≈ 2h(x[1])
@@ -55,15 +56,17 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n, degmax 
         # Store weights
         W[i, inds] .= wᵢ[:] ./ sum(wᵢ)
     end
+    dropzeros!(W)
 
     W
 end
 
 function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n, degmax = 100)
+    x = discretize(domain, n)
+    Δx = x[2] - x[1]
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
-    x = discretize(domain, n)
+    ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
 
     if all(≈(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
@@ -117,6 +120,7 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n, degma
         # Store weights
         W[i, j] .= wᵢ[:] ./ sum(wᵢ)
     end
+    dropzeros!(W)
 
     W
 end
@@ -127,12 +131,13 @@ function filter_matrix(
     n,
     degmax = 100,
 )
+    x = discretize(domain, n)
+    Δx = x[2] - x[1]
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
-    ival_domain = (domain.left - 0.001L)..(domain.right + 0.001L)
+    ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
     G = f.kernel
-    x = discretize(domain, n)
     W = spzeros(n + 1, n + 1)
     for i = 1:n+1
         # Point
@@ -142,12 +147,11 @@ function filter_matrix(
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domaain
-        ival = (xᵢ ± hᵢ)# ∩ ival_domain
+        ival = (xᵢ ± hᵢ) ∩ ival_domain
         j = x .∈ [ival]
         xⱼ = x[j]
         N = length(xⱼ)
 
-        # deg = min(degmax, max(1, floor(Int, √(n - 1))))
         deg = min(degmax, N - 1)
         ϕ = chebyshevt(0:deg, ival)
 
@@ -155,16 +159,13 @@ function filter_matrix(
         kern = Fun(x -> G(x - xᵢ), ival)
         kern /= sum(kern)
 
+        # Polynomial moments around point
+        μᵢ = sum.(kern .* ϕ)
+
         # Polynomials evaluated at integration points
         Vᵢ = zeros(deg + 1, N)
-
-        # Polynomial moments around point
-        μᵢ = zeros(deg + 1)
-
-        # Fill in
         for d = 1:deg+1
             Vᵢ[d, :] = ϕ[d].(xⱼ)
-            μᵢ[d] = sum(kern * ϕ[d])
         end
 
         # Fit weights
@@ -175,6 +176,7 @@ function filter_matrix(
         # Store weights
         W[i, j] .= wᵢ[:] ./ sum(wᵢ)
     end
+    dropzeros!(W)
 
     W
 end
@@ -235,6 +237,7 @@ function filter_matrix(
         # Store weights
         W[i, j] .= wᵢ[:] ./ sum(wᵢ)
     end
+    dropzeros!(W)
 
     W
 end

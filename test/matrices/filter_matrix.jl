@@ -1,4 +1,4 @@
-@testset "Filter matrix" begin
+@testset "filter_matrix.jl" begin
     a = 0.0
     b = 2π
     n = 100
@@ -58,7 +58,7 @@
     @test W isa SparseMatrixCSC
     @test size(W) == (n + 1, n + 1)
     @test all(sum(W, dims = 2) .≈ 1)
-    
+
     # PeriodicIntervalDomain
     W = filter_matrix(g, periodic_interval, n)
     @test W isa SparseMatrixCSC

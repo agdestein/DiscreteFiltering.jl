@@ -1,4 +1,4 @@
-@testset "Inverse filter matrix" begin
+@testset "reconstruction_matrix.jl" begin
     a = 0.0
     b = 2π
     n = 100
@@ -59,7 +59,7 @@
     @test R isa SparseMatrixCSC
     @test size(R) == (n + 1, n + 1)
     @test all(sum(R, dims = 2) .≈ 1)
-    
+
     # PeriodicIntervalDomain
     R = reconstruction_matrix(g, periodic_interval, n)
     @test R isa SparseMatrixCSC

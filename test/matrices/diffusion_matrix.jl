@@ -1,4 +1,4 @@
-@testset "Diffusion matrix" begin
+@testset "diffusion_matrix.jl" begin
     a = 0.0
     b = 2π
     n = 100

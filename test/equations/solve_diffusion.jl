@@ -12,7 +12,7 @@
     g_a(t) = t
     g_b(t) = t
 
-    params = (; abstol = 1e-6, reltol = 1e-4)
+    tols = (; abstol = 1e-6, reltol = 1e-4)
 
     # Number of mesh points
     N = floor.(Int, 10 .^ LinRange(2.5, 4.0, 4))
@@ -31,7 +31,7 @@
         h(x) = Δx / 2
 
         # Exact filtered solution
-        ū(x, t) = begin
+        function ū(x, t)
             α = max(a, x - h(x))
             β = min(b, x + h(x))
             1 / (β - α) * (u_int(β, t) - u_int(α, t))
@@ -49,7 +49,7 @@
             n;
             method = "discretizefirst",
             boundary_conditions = "derivative",
-            params...,
+            tols...,
         )
 
         # Solve filtered-then-discretized problem
@@ -60,7 +60,7 @@
             n;
             method = "filterfirst",
             boundary_conditions = "derivative",
-            params...,
+            tols...,
         )
 
         # Solve discretized-then-filtered problem
@@ -71,7 +71,7 @@
             n;
             method = "discretizefirst",
             boundary_conditions = "derivative",
-            params...,
+            tols...,
         )
 
         ## Relative error
@@ -95,19 +95,8 @@
     end
 
 
-    # Discretization
+    # Test exact boundary conditions
     n = 100
-    x = discretize(domain, n)
-    Δx = (domain.right - domain.left) / n
-
-    # Exact filtered solution
-    ū(x, t) = begin
-        α = max(a, x - h(x))
-        β = min(b, x + h(x))
-        1 / (β - α) * (u_int(β, t) - u_int(α, t))
-    end
-
-    # Equations
     equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
 
     # Solve discretized problem with DAE formulation
@@ -118,7 +107,7 @@
         n;
         method = "discretizefirst",
         boundary_conditions = "exact",
-        params...,
+        tols...,
     )
 
     # Solve discretized problem with derivative BC
@@ -129,9 +118,8 @@
         n;
         method = "discretizefirst",
         boundary_conditions = "derivative",
-        params...,
+        tols...,
     )
 
     @test sol_exact(T) ≈ sol_derivative(T)
-
 end

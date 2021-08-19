@@ -1,4 +1,4 @@
-@testset "Domain" begin
+@testset "domain.jl" begin
     # Closed interval domain
     a, b = 0.0, 1.0
     domain = ClosedIntervalDomain(a, b)

@@ -139,10 +139,8 @@ function solve(
 
     # Get matrices
     D = diffusion_matrix(domain, n)
-    # W = filter_matrix(filter, domain, n)
-    # R = reconstruction_matrix(filter, domain, n)
-    W = filter_matrix_meshwidth(filter, domain, n)
-    R = reconstruction_matrix_meshwidth(filter, domain, n)
+    W = filter_matrix(filter, domain, n)
+    R = reconstruction_matrix(filter, domain, n)
     A = spdiagm(α.(x))
 
     # Initial conditions

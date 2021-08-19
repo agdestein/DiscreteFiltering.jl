@@ -165,10 +165,10 @@ function reconstruction_matrix(
         ϕ_int = integrate.(ϕ)
 
         Z = spzeros(deg + 1, N)
-        v = spzeros(deg + 1)
+        v = zeros(deg + 1)
         for k = 1:(deg+1)
-            for ival ∈ ivals
-                Z[k, :] =
+            for (kk, ival) ∈ enumerate(ivals)
+                Z[k, kk] =
                     (ϕ_int[k](ival.right) - ϕ_int[k](ival.left)) / (ival.right - ival.left)
             end
             v[k] = ϕ[k](xᵢ)
@@ -288,25 +288,26 @@ function reconstruction_matrix(
         # deg = min(degmax, max(1, floor(Int, √sum(j))))
 
         # Vandermonde matrix
-        d = 0:deg-1
         aⱼ = max.(xⱼ - hⱼ, domain.left - Δx / 1000)
         bⱼ = min.(xⱼ + hⱼ, domain.right + Δx / 1000)
         # Δhⱼ = bⱼ - aⱼ
         ivals = xⱼ .± hⱼ
         # ivals = Interval.(aⱼ, bⱼ)
 
-        ϕ = chebyshevt.(d, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
-        # ϕ = chebyshevt.(d, [domain.left..domain.right])
+        ϕ = chebyshevt.(0:deg, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
+        # ϕ = chebyshevt.(0:deg, [domain.left..domain.right])
 
+        # Polynomials evaluated at xᵢ
+        v = [ϕ(xᵢ) for ϕ ∈ ϕ]
+
+        # Polynomial moments
         Z = spzeros(deg + 1, N)
-        v = zeros(deg + 1)
-        for k = 1:N-1
+        for k = 1:N
             ival = ivals[k]
             ϕⱼ = Fun.(ϕ, [ival])
             kern = Fun(x -> G(x - xⱼ[k]), ival)
             kern /= sum(kern)
             Z[:, k] = sum.(kern .* ϕⱼ)
-            v[k] = ϕ[k](xᵢ)
         end
 
         rᵢ = Z \ v

@@ -16,7 +16,6 @@ function solve_adbc(
     n,
     Δt = (tlist[2] - tlist[1]) / 1000,
 ) where {T}
-
     @unpack domain, filter, f, g_a, g_b = equation
     x = discretize(domain, n)
     Δx = x[2] - x[1]
@@ -63,9 +62,9 @@ function solve_adbc(
 
         # Next inner points for filtered solution
         ūᵏ⁺¹[2:end-1] .+=
-            Δt .* D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
-            Δt .* (abs.(x[2:end-1] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
-            Δt .* (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
+            Δt .* D[2:end-1, :]ūᵏ .+ Δt .* W[2:end-1, :]f.(x, tᵏ) .+
+            Δt .* (abs.(x[2:end-1] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[end-1]) / Δx .-
+            Δt .* (abs.(x[2:end-1] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[2] - g_a(tᵏ)) / Δx
 
         # Advance by Δt
         ūᵏ .= ūᵏ⁺¹
@@ -87,36 +86,65 @@ function solve_adbc(
     ūᵏ
 end
 
-
 function solve_adbc(
     equation::DiffusionEquation{ClosedIntervalDomain{T},ConvolutionalFilter},
     u,
     tlist,
     n,
-    Δt = (tlist[2] - tlist[1]) / 1000,
+    Δt = (tlist[2] - tlist[1]) / 1000;
+    solver = :euler,
+    δ = √(6 / π) / equation.filter.kernel(0),
 ) where {T}
 
     @unpack domain, filter, f, g_a, g_b = equation
     x = discretize(domain, n)
     Δx = x[2] - x[1]
-    h = filter.width
+    h₀ = filter.width(0)
     G = filter.kernel
     a, b = domain.left, domain.right
 
     # Get matrices
     D = diffusion_matrix(domain, n)
 
+    # Filter stencil
+    normalize(w) = w / sum(w)
+    nw = floor(Int, h₀ / 2Δx)
+    inds = -nw:nw
+    w = normalize(G.(Δx .* inds))
+
     # Filter matrix
-    W = filter_matrix(filter, domain, n)
-    R = reconstruction_matrix(filter, domain, n)
+    diags = [i => fill(w, n + 1 - abs(i)) for (i, w) ∈ zip(inds, w)]
+    W = spdiagm(diags...)
+
+    # Move weights of outside points to endpoint
+    for i = 1:nw
+        W[i, 1] += sum(w[1:(nw+1-i)])
+        W[end+1-i, end] += sum(w[(end-nw+i):end])
+    end
+
+    # Boundary stencils
     w₀ = W[1, :]
     wₙ = W[end, :]
 
-    function perform_step!(ūᵏ, tᵏ, Δt, p)
-        uᵏ, uᵏ⁺¹, ūᵏ⁺¹ = p
+    Ga = G.(x[2:end-1] .- a)
+    Gb = G.(b .- x[2:end-1])
+
+    f̄ᵏ_constant = apply_filter_extend(x -> f(x, tlist[1]), filter, domain).(x[2:end-1])
+
+    function du!(du, ūᵏ, tᵏ, Δt, p)
+        @unpack uᵏ, uᵏ⁺¹, Dūᵏ, fᵏ, f̄ᵏ, δ = p
+
+        # Diffusion term
+        mul!(Dūᵏ, D, ūᵏ)
+
+        # Source term
+        # fᵏ .= f.(x, tᵏ)
+        # mul!(f̄ᵏ, W[2:end-1, :], fᵏ)
+        # f̄ᵏ .= apply_filter_extend(x -> f(x, tᵏ), filter, domain).(x[2:end-1])
+        f̄ᵏ = f̄ᵏ_constant
 
         # Current approximate unfiltered solution
-        mul!(uᵏ, R, ūᵏ)
+        @. uᵏ = ūᵏ - δ^2 / 24 * Dūᵏ
 
         # Next approximate unfiltered solution
         uᵏ⁺¹ .= uᵏ
@@ -124,21 +152,57 @@ function solve_adbc(
         uᵏ⁺¹[end] = g_b(tᵏ + Δt)
 
         # Filtered boundary conditions
-        ūᵏ⁺¹[1] = w₀'uᵏ⁺¹
-        ūᵏ⁺¹[end] = wₙ'uᵏ⁺¹
+        du[1] = (w₀'uᵏ⁺¹ - ūᵏ[1]) / Δt
+        du[end] = (wₙ'uᵏ⁺¹ - ūᵏ[end]) / Δt
 
         # Next inner points for filtered solution
-        ūᵏ⁺¹[2:end-1] .+=
-            Δt .* D[2:end-1, :]ūᵏ .+ W[2:end-1, :]f.(x, tᵏ) .+
-            Δt .* G.(b .- x[2:end-1]) .* (g_b(tᵏ) - uᵏ[2]) / Δx .-
-            Δt .* G.(x[2:end-1] .- a) .* (uᵏ[end-1] - g_a(tᵏ)) / Δx
-
-        # Advance by Δt
-        ūᵏ .= ūᵏ⁺¹
+        du[2:end-1] .=
+            Dūᵏ[2:end-1] .+ f̄ᵏ .+ Gb .* (g_b(tᵏ) - uᵏ[end-1]) / Δx .-
+            Ga .* (uᵏ[2] - g_a(tᵏ)) / Δx
     end
 
-    ūᵏ = W * u.(x)
-    p = (copy(ūᵏ), copy(ūᵏ), copy(ūᵏ))
+    function perform_step_euler!(ūᵏ, tᵏ, Δt, p)
+        @unpack du = p
+        du!(du, ūᵏ, tᵏ, Δt, p)
+        ūᵏ .+= Δt .* du
+    end
+
+    function perform_step_RK4!(ūᵏ, tᵏ, Δt, p)
+        @unpack k₁, k₂, k₃, k₄ = p
+
+        # Compute change
+        du!(k₁, ūᵏ, tᵏ, Δt / 2, p)
+        du!(k₂, ūᵏ + Δt / 2 * k₁, tᵏ + Δt / 2, Δt / 2, p)
+        du!(k₃, ūᵏ + Δt / 2 * k₂, tᵏ + Δt / 2, Δt / 2, p)
+        du!(k₄, ūᵏ + Δt * k₃, tᵏ + Δt, Δt / 2, p)
+
+        # Advance by Δt
+        @. ūᵏ += Δt * (k₁ / 6 + k₂ / 3 + k₃ / 3 + k₄ / 6)
+    end
+
+    if solver == :euler
+        perform_step! = perform_step_euler!
+    elseif solver == :RK4
+        perform_step! = perform_step_RK4!
+    else
+        error("Solver is not supported")
+    end
+
+    # ūᵏ = W * u.(x)
+    ūᵏ = apply_filter_extend(u, filter, domain).(x)
+    p = (;
+        du = copy(ūᵏ),
+        k₁ = copy(ūᵏ),
+        k₂ = copy(ūᵏ),
+        k₃ = copy(ūᵏ),
+        k₄ = copy(ūᵏ),
+        uᵏ = copy(ūᵏ),
+        uᵏ⁺¹ = copy(ūᵏ),
+        Dūᵏ = copy(ūᵏ),
+        fᵏ = copy(ūᵏ),
+        f̄ᵏ = copy(ūᵏ[2:end-1]),
+        δ,
+    )
     tᵏ = tlist[1]
     while tᵏ + Δt < tlist[2]
         perform_step!(ūᵏ, tᵏ, Δt, p)

@@ -94,8 +94,9 @@ function solve_adbc(
     Δt = (tlist[2] - tlist[1]) / 1000;
     solver = :euler,
     δ = √(6 / π) / equation.filter.kernel(0),
+    ū_ext = nothing,
+    uₓ = nothing,
 ) where {T}
-
     @unpack domain, filter, f, g_a, g_b = equation
     x = discretize(domain, n)
     Δx = x[2] - x[1]
@@ -152,13 +153,26 @@ function solve_adbc(
         uᵏ⁺¹[end] = g_b(tᵏ + Δt)
 
         # Filtered boundary conditions
-        du[1] = (w₀'uᵏ⁺¹ - ūᵏ[1]) / Δt
-        du[end] = (wₙ'uᵏ⁺¹ - ūᵏ[end]) / Δt
+        if isnothing(ū_ext)
+            # Approximate deconvolution boundary conditions
+            du[1] = (w₀'uᵏ⁺¹ - ūᵏ[1]) / Δt
+            du[end] = (wₙ'uᵏ⁺¹ - ūᵏ[end]) / Δt
+        else
+            # Exact filtered boundary conditions
+            du[1] = (ū_ext(tᵏ + Δt)(a) - ūᵏ[1]) / Δt
+            du[end] = (ū_ext(tᵏ + Δt)(b) - ūᵏ[end]) / Δt
+        end
+
+        if isnothing(uₓ)
+            uₓ_a = (uᵏ[2] - g_a(tᵏ)) / Δx
+            uₓ_b = (g_b(tᵏ) - uᵏ[end-1]) / Δx
+        else
+            uₓ_a = uₓ(a, tᵏ)
+            uₓ_b = uₓ(b, tᵏ)
+        end
 
         # Next inner points for filtered solution
-        du[2:end-1] .=
-            Dūᵏ[2:end-1] .+ f̄ᵏ .+ Gb .* (g_b(tᵏ) - uᵏ[end-1]) / Δx .-
-            Ga .* (uᵏ[2] - g_a(tᵏ)) / Δx
+        du[2:end-1] .= Dūᵏ[2:end-1] .+ f̄ᵏ .+ Gb .* uₓ_b .- Ga .* uₓ_a
     end
 
     function perform_step_euler!(ūᵏ, tᵏ, Δt, p)

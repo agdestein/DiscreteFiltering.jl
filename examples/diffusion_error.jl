@@ -24,10 +24,12 @@ u_int = t * x - 1 / 2π * cos(2π * x) - 1 / 8π * cos(8π * x)
 
 # Compute deduced quantities
 dₜ = Differential(t)
-dₓₓ = Differential(x)^2
+dₓ = Differential(x)
+dₓₓ = dₓ^2
 f = expand_derivatives(dₜ(u) - dₓₓ(u))
 g_b = substitute(u, Dict(x => b))
 g_a = substitute(u, Dict(x => a))
+uₓ = expand_derivatives(dₓ(u))
 
 # for sym ∈ [:u, :u_int, :f, :g_b, :g_a]
 #     open("output/$sym.tex", "w") do io
@@ -39,6 +41,7 @@ u = eval(build_function(u, x, t))
 f = eval(build_function(f, x, t))
 g_a = eval(build_function(g_a, t))
 g_b = eval(build_function(g_b, t))
+uₓ = eval(build_function(uₓ, x, t))
 
 ## Ode solver tolerances
 # tols = (;)
@@ -103,7 +106,7 @@ sol_bar = solve(
 )
 
 # Solve filtered-then-discretized problem with ADBC
-ū_adbc = solve_adbc(equation_filtered, u₀, tlist, n, T / nₜ)
+ū_adbc = solve_adbc(equation_filtered, u₀, tlist, n, T / nₜ; ū_ext, uₓ)
 
 # Relative error
 u_exact = u.(x, T)

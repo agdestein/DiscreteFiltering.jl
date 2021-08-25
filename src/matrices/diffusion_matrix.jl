@@ -3,10 +3,7 @@
 
 Assemble discrete diffusion matrix.
 """
-function diffusion_matrix(::Domain, n)
-    error("Not implemented")
-end
-
+function diffusion_matrix end
 
 function diffusion_matrix(domain::ClosedIntervalDomain, n)
     Δx = (domain.right - domain.left) / n
@@ -16,7 +13,6 @@ function diffusion_matrix(domain::ClosedIntervalDomain, n)
     D ./= Δx^2
     D
 end
-
 
 function diffusion_matrix(domain::PeriodicIntervalDomain, n)
     Δx = (domain.right - domain.left) / n

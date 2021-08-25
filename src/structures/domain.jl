@@ -19,7 +19,7 @@ abstract type AbstractIntervalDomain <: Domain end
 
 Interval domain.
 """
-struct ClosedIntervalDomain{T<:Number} <: AbstractIntervalDomain
+struct ClosedIntervalDomain{T} <: AbstractIntervalDomain
     left::T
     right::T
 end
@@ -30,7 +30,7 @@ end
 
 Periodic interval domain.
 """
-struct PeriodicIntervalDomain{T<:Number} <: AbstractIntervalDomain
+struct PeriodicIntervalDomain{T} <: AbstractIntervalDomain
     left::T
     right::T
 end
@@ -41,15 +41,9 @@ end
 
 Discretize domain with `n` points.
 """
-function discretize(::Domain, n)
-    error("Not implemented")
-end
+function discretize end
 
-
-function discretize(domain::ClosedIntervalDomain, n)
-    LinRange(domain.left, domain.right, n + 1)
-end
-
+discretize(domain::ClosedIntervalDomain, n) = LinRange(domain.left, domain.right, n + 1)
 
 function discretize(domain::PeriodicIntervalDomain, n)
     LinRange(domain.left + (domain.right - domain.left) / n, domain.right, n)

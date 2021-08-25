@@ -3,9 +3,7 @@
 
 Assemble discrete advection matrix.
 """
-function advection_matrix(::Domain, n)
-    error("Not implemented")
-end
+function advection_matrix end
 
 function advection_matrix(domain::ClosedIntervalDomain, n)
     Δx = (domain.right - domain.left) / n
@@ -17,7 +15,6 @@ function advection_matrix(domain::ClosedIntervalDomain, n)
     C ./= Δx
     C
 end
-
 
 function advection_matrix(domain::PeriodicIntervalDomain, n)
     Δx = (domain.right - domain.left) / n

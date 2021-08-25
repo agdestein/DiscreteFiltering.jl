@@ -208,14 +208,22 @@ function apply_filter_extend(u, filter::ConvolutionalFilter, domain::ClosedInter
 
     # Exact filtered solution
     function ū_ext(x)
-        xₗ, xᵣ = x - h(x), x + h(x)
+        x₋, x₊ = x - h(x), x + h(x)
+        xₗ = max(a, x₋)
+        xᵣ = min(b, x₊)
 
-        u_ext(x) = x < a ? u(a) : (x < b ? u(x) : u(b))
+        Gfun = Fun(ξ -> G(ξ - x), x₋..x₊)
+        Gfun /= sum(Gfun)
 
-        ufun = Fun(u, xₗ..xᵣ)
-        Gfun = Fun(ξ -> G(ξ - x), xₗ..xᵣ)
+        S = sum(Fun(Gfun, xₗ..xᵣ) * Fun(u, xₗ..xᵣ))
+        if x₋ < a
+            S += u(a) * sum(Fun(Gfun, x₋..a))
+        end
+        if b < x₊
+            S += u(b) * sum(Fun(Gfun, b..x₊))
+        end
 
-        sum(Gfun * ufun) / sum(Gfun)
+        S
     end
 
     ū_ext

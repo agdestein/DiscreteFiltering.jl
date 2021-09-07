@@ -1,13 +1,13 @@
 
 """
-filter_matrix_meshwidth(f, domain, n)
+filter_matrix_meshwidth(f, domain, N)
 
 Assemble discrete filtering matrix from a continuous filter `f` width constant width
 \$h(x) = \\Delta x / 2\$.
 """
-function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, n)
-    x = discretize(domain, n)
-    Δx = 1 // n * (domain.right - domain.left)
+function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain, N)
+    x = discretize(domain, N)
+    Δx = 1 // N * (domain.right - domain.left)
     h = f.width
     h₀ = h(x[1])
 
@@ -29,7 +29,7 @@ function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain
     # stencil = [-6 // 2033, 77 // 1440, 863 // 960, 77 // 1440, -6 // 2033]
 
     # Construct banded matrix
-    diags = [i => fill(s, n - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    diags = [i => fill(s, N - abs(i)) for (i, s) ∈ zip(inds, stencil)]
     W = spdiagm(diags...)
 
     # Periodic extension of three point stencil
@@ -46,9 +46,9 @@ function filter_matrix_meshwidth(f::TopHatFilter, domain::PeriodicIntervalDomain
 end
 
 
-function filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, n)
-    x = discretize(domain, n)
-    Δx = 1 // n * (domain.right - domain.left)
+function filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, N)
+    x = discretize(domain, N)
+    Δx = 1 // N * (domain.right - domain.left)
     h = f.width
     h₀ = h(x[1])
 
@@ -64,7 +64,7 @@ function filter_matrix_meshwidth(f::TopHatFilter, domain::ClosedIntervalDomain, 
     # stencil = [-6 / 2033, 77 / 1440, 863 / 960, 77 / 1440, -6 / 2033]
 
     # Construct banded matrix
-    diags = [i => fill(s, n + 1 - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    diags = [i => fill(s, N + 1 - abs(i)) for (i, s) ∈ zip(inds, stencil)]
     W = spdiagm(diags...)
 
     # Boundary weights for three point stencil

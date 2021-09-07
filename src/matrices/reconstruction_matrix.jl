@@ -1,25 +1,25 @@
 """
-    reconstruction_matrix(filter, domain, n)
+    reconstruction_matrix(filter, domain, N)
 
 Approximate inverse of discrete filtering matrix, given filter `filter`.
 """
 function reconstruction_matrix end
 
-reconstruction_matrix(::IdentityFilter, ::ClosedIntervalDomain, n) = sparse(I, n + 1, n + 1)
-reconstruction_matrix(::IdentityFilter, ::PeriodicIntervalDomain, n) = sparse(I, n, n)
+reconstruction_matrix(::IdentityFilter, ::ClosedIntervalDomain, N) = sparse(I, N + 1, N + 1)
+reconstruction_matrix(::IdentityFilter, ::PeriodicIntervalDomain, N) = sparse(I, N, N)
 
 function reconstruction_matrix(
     filter::TopHatFilter,
     domain::ClosedIntervalDomain,
-    n,
+    N,
     degmax = 100,
 )
-    x = discretize(domain, n)
+    x = discretize(domain, N)
     h = filter.width
 
     # Get reconstruction weights for each point
-    R = spzeros(n + 1, n + 1)
-    for i = 1:n+1
+    R = spzeros(N + 1, N + 1)
+    for i = 1:N+1
         # Point
         xᵢ = x[i]
 
@@ -59,17 +59,17 @@ end
 # function reconstruction_matrix(
 #     filter::TopHatFilter,
 #     domain::PeriodicIntervalDomain,
-#     n,
+#     N,
 #     degmax = 100,
 # )
 #     L = (domain.right - domain.left)
 #     mid = (domain.left + domain.right) / 2
-#     x = discretize(domain, n)
+#     x = discretize(domain, N)
 #     h = filter.width
 
 #     # Get reconstruction weights for each point
-#     R = spzeros(n, n)
-#     for i = 1:n
+#     R = spzeros(N, N)
+#     for i = 1:N
 #         # Point
 #         xᵢ = x[i]
 
@@ -110,17 +110,17 @@ end
 function reconstruction_matrix(
     filter::TopHatFilter,
     domain::PeriodicIntervalDomain,
-    n,
+    N,
     λ = 1e-6,
     degmax = 100,
 )
     L = (domain.right - domain.left)
     h = filter.width
-    x = discretize(domain, n)
+    x = discretize(domain, N)
 
     # Get reconstruction weights for each point
-    R = spzeros(n, n)
-    for i = 1:n
+    R = spzeros(N, N)
+    for i = 1:N
         # Point
         xᵢ = x[i]
 
@@ -140,8 +140,8 @@ function reconstruction_matrix(
         xⱼ = x[j]' + sⱼ
 
         # Polynomial degree (Taylor series order)
-        N = length(xⱼ)
-        deg = min(degmax, N - 1)
+        Mₙ = length(xⱼ)
+        deg = min(degmax, Mₙ - 1)
         # deg = min(degmax, max(1, floor(Int, √sum(j))))
 
         # Vandermonde matrix
@@ -156,7 +156,7 @@ function reconstruction_matrix(
         # ϕ = chebyshevt.(0:deg, [domain.left..domain.right])
         ϕ_int = integrate.(ϕ)
 
-        Z = spzeros(deg + 1, N)
+        Z = spzeros(deg + 1, Mₙ)
         v = zeros(deg + 1)
         for k = 1:(deg+1)
             for (kk, ival) ∈ enumerate(ivals)
@@ -181,10 +181,10 @@ end
 function reconstruction_matrix(
     filter::ConvolutionalFilter,
     domain::ClosedIntervalDomain,
-    n,
+    N,
     degmax = 100,
 )
-    x = discretize(domain, n)
+    x = discretize(domain, N)
     Δx = x[2] - x[1]
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
@@ -193,8 +193,8 @@ function reconstruction_matrix(
     G = filter.kernel
 
     # Get reconstruction weights for each point
-    R = spzeros(n + 1, n + 1)
-    for i = 1:n+1
+    R = spzeros(N + 1, N + 1)
+    for i = 1:N+1
         # Point
         xᵢ = x[i]
 
@@ -203,7 +203,7 @@ function reconstruction_matrix(
         j = dists .< h.(x)
 
         # Polynomial degree (Taylor series order)
-        N = sum(j)
+        Mₙ = sum(j)
         deg = sum(j) - 1
 
         xⱼ = x[j]
@@ -222,8 +222,8 @@ function reconstruction_matrix(
         v = [ϕ(xᵢ) for ϕ ∈ ϕ]
 
         # Moment matrix
-        Z = spzeros(deg + 1, N)
-        for k = 1:N
+        Z = spzeros(deg + 1, Mₙ)
+        for k = 1:Mₙ
             ival = ivals[k]
             ϕₖ = Fun.(ϕ, [ival])
             kern = Fun(x -> G(x - xⱼ[k]), ival)
@@ -244,10 +244,10 @@ end
 function reconstruction_matrix(
     filter::ConvolutionalFilter,
     domain::PeriodicIntervalDomain,
-    n,
+    N,
     degmax = 100,
 )
-    x = discretize(domain, n)
+    x = discretize(domain, N)
     Δx = x[2] - x[1]
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
@@ -255,8 +255,8 @@ function reconstruction_matrix(
     G = filter.kernel
 
     # Get reconstruction weights for each point
-    R = spzeros(n, n)
-    for i = 1:n
+    R = spzeros(N, N)
+    for i = 1:N
         # Point
         xᵢ = x[i]
 
@@ -276,7 +276,7 @@ function reconstruction_matrix(
 
         # Polynomial degree (Taylor series order)
         deg = sum(j) - 1
-        N = sum(j)
+        Mₙ = sum(j)
         # deg = min(degmax, max(1, floor(Int, √sum(j))))
 
         # Vandermonde matrix
@@ -293,8 +293,8 @@ function reconstruction_matrix(
         v = [ϕ(xᵢ) for ϕ ∈ ϕ]
 
         # Polynomial moments
-        Z = spzeros(deg + 1, N)
-        for k = 1:N
+        Z = spzeros(deg + 1, Mₙ)
+        for k = 1:Mₙ
             ival = ivals[k]
             ϕⱼ = Fun.(ϕ, [ival])
             kern = Fun(x -> G(x - xⱼ[k]), ival)

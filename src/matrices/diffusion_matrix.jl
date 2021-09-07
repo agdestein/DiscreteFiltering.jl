@@ -6,19 +6,23 @@ Assemble discrete diffusion matrix.
 function diffusion_matrix end
 
 function diffusion_matrix(domain::ClosedIntervalDomain, n)
-    Δx = (domain.right - domain.left) / n
-    D = spdiagm(-1 => fill(1.0, n), 0 => fill(-2.0, n + 1), 1 => fill(1.0, n))
-    D[1, 1] = -1.0
-    D[end, end] = -1.0
-    D ./= Δx^2
+    Δx = 1 // n * (domain.right - domain.left)
+    inds = [-1, 0, 1]
+    stencil = [1, -2, 1] / Δx^2
+    diags = [i => fill(s, n + 1 - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    D = spdiagm(diags...)
+    D[1, 1] = stencil[1] + stencil[2]
+    D[end, end] = stencil[end-1] + stencil[end]
     D
 end
 
 function diffusion_matrix(domain::PeriodicIntervalDomain, n)
-    Δx = (domain.right - domain.left) / n
-    D = spdiagm(-1 => fill(1.0, n - 1), 0 => fill(-2.0, n), 1 => fill(1.0, n - 1))
-    D[1, end] = 1.0
-    D[end, 1] = 1.0
-    D ./= Δx^2
+    Δx = 1 // n * (domain.right - domain.left)
+    inds = [-1, 0, 1]
+    stencil = [1, -2, 1] / Δx^2
+    diags = [i => fill(s, n - abs(i)) for (i, s) ∈ zip(inds, stencil)]
+    D = spdiagm(diags...)
+    D[1, end] = stencil[1]
+    D[end, 1] = stencil[end]
     D
 end

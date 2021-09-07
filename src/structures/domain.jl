@@ -34,6 +34,7 @@ struct PeriodicIntervalDomain{T} <: AbstractIntervalDomain
     left::T
     right::T
 end
+PeriodicIntervalDomain(a, b) = PeriodicIntervalDomain(promote(a, b)...)
 
 
 """

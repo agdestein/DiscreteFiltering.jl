@@ -16,10 +16,6 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n, degmax 
     ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
 
-    if all(≈(h(x[1])), h.(x)) && x[2] - x[1] ≈ 2h(x[1])
-        return filter_matrix_meshwidth(f, domain, n)
-    end
-
     W = spzeros(n + 1, n + 1)
     for i = 1:n+1
         # Point

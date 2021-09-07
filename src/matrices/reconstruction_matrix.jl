@@ -17,10 +17,6 @@ function reconstruction_matrix(
     x = discretize(domain, n)
     h = filter.width
 
-    if all(h.(x) .≈ h(x[1])) && x[2] - x[1] .≈ 2h(x[1])
-        return reconstruction_matrix_meshwidth(filter, domain, n)
-    end
-
     # Get reconstruction weights for each point
     R = spzeros(n + 1, n + 1)
     for i = 1:n+1
@@ -70,10 +66,6 @@ end
 #     mid = (domain.left + domain.right) / 2
 #     x = discretize(domain, n)
 #     h = filter.width
-
-#     if all(h.(x) .≈ h(x[1])) && x[2] - x[1] .≈ 2h(x[1])
-#         return reconstruction_matrix_meshwidth(filter, domain, n)
-#     end
 
 #     # Get reconstruction weights for each point
 #     R = spzeros(n, n)

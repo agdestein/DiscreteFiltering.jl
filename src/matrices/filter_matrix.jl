@@ -61,17 +61,13 @@ function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, n, degmax 
     W
 end
 
-function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n, degmax = 100)
+function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n, degmax = 10)
     x = discretize(domain, n)
     Δx = x[2] - x[1]
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2
     ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
-
-    if all(≈(h(x[1])), h.(x)) && x[2] - x[1] .≈ 2h(x[1])
-        return filter_matrix_meshwidth(f, domain, n)
-    end
 
     W = spzeros(n, n)
     for i = 1:n
@@ -82,26 +78,23 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n, degma
         hᵢ = h(xᵢ)
 
         # Indices of integration points inside domain
-        ival = (xᵢ ± hᵢ)
-        # indsleft = x .+ L .∈ [ival]
-        # indsmid = x .∈ [ival]
-        # indsright = x .- L .∈ [ival]
+        ival = xᵢ ± hᵢ
         indsleft = x .+ L .∈ [ival]
         indsmid = x .∈ [ival]
         indsright = x .- L .∈ [ival]
         j = indsleft .| indsmid .| indsright
         j = mapreduce(s -> circshift(j, s), .|, [-1, 0, 1])
         xⱼ = (x.+(xᵢ.-x.>L/2)L.-(x.-xᵢ.>L/2)L)[j]
-        N = length(xⱼ)
+        N = length(xⱼ) - 1
 
         # deg = min(degmax, max(1, floor(Int, √(n - 1))))
-        deg = min(degmax, N - 1)
+        deg = min(degmax, N)
         # ϕ = chebyshevt(0:deg, ival)
         ϕ = chebyshevt(0:deg, xᵢ ± 3hᵢ)
         ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = spzeros(deg + 1, N)
+        Vᵢ = spzeros(deg + 1, N+1)
 
         # Polynomial moments around point
         μᵢ = zeros(deg + 1)
@@ -113,12 +106,12 @@ function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, n, degma
         end
 
         # Fit weights
-        # wᵢ = Vᵢ \ μᵢ
-        wᵢ = nonneg_lsq(Vᵢ, μᵢ)
-        # wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, n, n)) \ Vᵢ'μᵢ
+        wᵢ = Vᵢ \ μᵢ
+        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
+        # wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, N+1, N+1)) \ Vᵢ'μᵢ
 
         # Store weights
-        W[i, j] .= wᵢ[:] ./ sum(wᵢ)
+        W[i, j] .= wᵢ[:] #./ sum(wᵢ)
     end
     dropzeros!(W)
 
@@ -185,7 +178,7 @@ function filter_matrix(
     f::ConvolutionalFilter,
     domain::PeriodicIntervalDomain,
     n,
-    degmax = 100,
+    degmax = 10,
 )
     L = (domain.right - domain.left)
     mid = (domain.left + domain.right) / 2

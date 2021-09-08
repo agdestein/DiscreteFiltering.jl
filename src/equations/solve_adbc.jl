@@ -164,9 +164,11 @@ function solve_adbc(
         end
 
         if isnothing(uₓ)
+            # Approximate boundary terms
             uₓ_a = (uᵏ[2] - g_a(tᵏ)) / Δx
             uₓ_b = (g_b(tᵏ) - uᵏ[end-1]) / Δx
         else
+            # Exact boundary terms
             uₓ_a = uₓ(a, tᵏ)
             uₓ_b = uₓ(b, tᵏ)
         end
@@ -219,6 +221,7 @@ function solve_adbc(
     )
     tᵏ = tlist[1]
     while tᵏ + Δt < tlist[2]
+        # @show tᵏ
         perform_step!(ūᵏ, tᵏ, Δt, p)
         tᵏ += Δt
     end
@@ -228,5 +231,15 @@ function solve_adbc(
     perform_step!(ūᵏ, tᵏ, Δt_last, p)
     tᵏ += Δt_last
 
+    # nT = round(Int, (tlist[2] - tlist[1]) / Δt)
+    # uu = zeros(n + 1, nT + 1)
+    # uu[:, 1] = ūᵏ
+    # for i = 1:nT
+    #     perform_step!(ūᵏ, tᵏ, Δt, p)
+    #     uu[:, i+1] = ūᵏ
+    #     tᵏ += Δt
+    # end
+
     ūᵏ
+    # uu
 end

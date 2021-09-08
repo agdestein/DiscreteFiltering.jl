@@ -21,9 +21,11 @@ domain = PeriodicIntervalDomain(a, b)
 
 
 ## Discretization
-n = 500
-x = discretize(domain, n)
-Δx = (b - a) / n
+N = 500
+M = N
+x = discretize(domain, M)
+ξ = discretize(domain, N)
+Δx = (b - a) / N
 
 Δx^2 / maximum(abs.(α.(x)))
 
@@ -39,20 +41,19 @@ ylims!((0, ylims()[2]))
 
 
 ## Get matrices
-C = advection_matrix(domain, n)
-D = diffusion_matrix(domain, n)
-W = filter_matrix(filter, domain, n)
-R = reconstruction_matrix(filter, domain, n)
-A = spdiagm(α.(x))
+C = advection_matrix(domain, N)
+D = diffusion_matrix(domain, N)
+W = filter_matrix(filter, domain, M, N)
+R = reconstruction_matrix(filter, domain, M, N)
+A = spdiagm(α.(ξ))
 
 
 ## Exact solutions
-u₀(x) = sin(x) + 0.6cos(5x) + 0.04sin(20(x - 1))
+u₀(ξ) = sin(ξ) + 0.6cos(5ξ) + 0.04sin(20(ξ - 1))
 
 ## Discrete initial conditions
-uₕ = u₀.(x, 0.0)
-
-plot(x, uₕ, label = "Discretized")
+uₕ = u₀.(ξ, 0.0)
+plot(ξ, uₕ, label = "Discretized")
 
 ## Extension to a non-linear case: Burgers equation
 ν = 0.03
@@ -67,9 +68,9 @@ end
 prob_allbar = ODEProblem(duₕ_allbar, W * uₕ, (0, T))
 sol_allbar = solve(prob_allbar, QNDF(), abstol = 1e-6, reltol = 1e-4)
 
-plot(x, uₕ, label = "Initial")
+plot(ξ, uₕ, label = "Initial")
 plot!(x, W * uₕ, label = "Initial discretized-then-filtered")
-#plot!(x, sol(t), label = "Discretized")
+#plot!(ξ, sol(t), label = "Discretized")
 plot!(x, W * sol(t), label = "W * Discretized")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
 ylims!(minimum(uₕ), maximum(uₕ))

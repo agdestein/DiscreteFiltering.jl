@@ -13,9 +13,11 @@ domain = PeriodicIntervalDomain(a, b)
 
 
 ## Discretization
-n = 100
-x = discretize(domain, n)
-Δx = (b - a) / n
+N = 100
+M = N
+x = discretize(domain, M)
+ξ = discretize(domain, N)
+Δx = (b - a) / N
 
 
 ## Filter
@@ -43,11 +45,11 @@ ylims!((0, ylims()[2]))
 
 
 ## Get matrices
-C = advection_matrix(domain, n)
-D = diffusion_matrix(domain, n)
-W = filter_matrix(f, domain, n)
-R = reconstruction_matrix(f, domain, n)
-A = spdiagm(α.(x))
+C = advection_matrix(domain, N)
+D = diffusion_matrix(domain, N)
+W = filter_matrix(f, domain, M, N)
+R = reconstruction_matrix(f, domain, M, N)
+A = spdiagm(α.(ξ))
 
 ## Inspect matrices
 spy(W)
@@ -55,13 +57,13 @@ spy(R)
 
 
 ## Exact solutions
-u(x, t) = sin(x - t) + 3 / 5 * cos(5(x - t)) + 1 / 25 * sin(20(x - 1 - t))
-u_int(x, t) = -cos(x - t) + 3 / 25 * sin(5(x - t)) - 1 / 25 / 20 * cos(20(x - 1 - t))
+u(ξ, t) = sin(ξ - t) + 3 / 5 * cos(5(ξ - t)) + 1 / 25 * sin(20(ξ - 1 - t))
+u_int(ξ, t) = -cos(ξ - t) + 3 / 25 * sin(5(ξ - t)) - 1 / 25 / 20 * cos(20(ξ - 1 - t))
 ū(x, t) = 1 / 2h(x) * (u_int(x + h(x), t) - u_int(x - h(x), t))
 
 
 ## Discrete initial conditions
-uₕ = u.(x, 0.0)
+uₕ = u.(ξ, 0.0)
 ūₕ = ū.(x, 0.0)
 uₕ_allbar = W * uₕ
 
@@ -89,7 +91,7 @@ plot(x, uₕ, label = "Initial")
 plot!(x, ūₕ, label = "Initial filtered")
 plot!(x, sol_bar(t), label = "Filtered-then-discretized")
 plot!(x, ū.(x, t), label = "Filtered exact")
-#plot!(x, 500*α.(x))
+#plot!(x, 500*α.(ξ))
 
 
 ## Solve discretized-and-then-filtered problem
@@ -101,7 +103,7 @@ sol_allbar = solve(prob_allbar, Tsit5(), abstol = 1e-6, reltol = 1e-4)
 plot(x, uₕ, label = "Initial")
 plot!(x, uₕ_allbar, label = "Initial discretized-then-filtered")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
-plot!(x, W * u.(x, t), label = "Exact")
+plot!(x, W * u.(ξ, t), label = "Exact")
 
 ## PGFPlotsX
 pgfplotsx()
@@ -122,13 +124,13 @@ savefig(p, "output/advection/solution.tikz")
 
 
 ## Relative error
-u_exact = u.(x, t)
+u_exact = u.(ξ, t)
 ū_exact = ū.(x, t)
 err = abs.(sol(t) - u_exact) ./ maximum(abs.(u_exact))
 err_bar = abs.(sol_bar(t) - u_exact) ./ maximum(abs.(u_exact))
 err_allbar = abs.(sol_allbar(t) - u_exact) ./ maximum(abs.(u_exact))
 
 plot()
-plot!(x, err, label = "Unfiltered discretized")
+plot!(ξ, err, label = "Unfiltered discretized")
 plot!(x, err_bar, label = "Filtered-then-discretized")
 plot!(x, err_allbar, label = "Discretized-then-filtered")

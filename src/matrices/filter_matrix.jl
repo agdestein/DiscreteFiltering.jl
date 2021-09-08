@@ -1,113 +1,130 @@
 """
-    filter_matrix(f, domain, N)
+    filter_matrix(f, domain, M, N)
 
 Assemble discrete filtering matrix from a continuous filter `f`.
 """
 function filter_matrix end
 
-filter_matrix(::IdentityFilter, ::ClosedIntervalDomain, N) = sparse(I, N + 1, N + 1)
-filter_matrix(::IdentityFilter, ::PeriodicIntervalDomain, N) = sparse(I, N, N)
 
-function filter_matrix(f::TopHatFilter, domain::ClosedIntervalDomain, N, degmax = 100)
-    x = discretize(domain, N)
+function filter_matrix(::IdentityFilter, ::AbstractIntervalDomain, M, N)
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
+    interpolation_matrix(x, ξ)
+end
+
+function filter_matrix(
+    f::TophatFilter,
+    domain::ClosedIntervalDomain,
+    M,
+    N,
+    degmax = 10,
+    λ = 0,
+)
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     Δx = x[2] - x[1]
-    L = (domain.right - domain.left)
-    mid = (domain.left + domain.right) / 2
     ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
 
-    W = spzeros(N + 1, N + 1)
-    for i = 1:N+1
+    W = spzeros(M + 1, N + 1)
+    for m = 1:(M+1)
         # Point
-        xᵢ = x[i]
+        xₘ = x[m]
 
         # Filter width at point
-        hᵢ = h(xᵢ)
+        hₘ = h(xₘ)
 
         # Indices of integration points inside domaain
-        ival = (xᵢ ± hᵢ) ∩ ival_domain
+        ival = (xₘ ± hₘ) ∩ ival_domain
         ival_length = ival.right - ival.left
-        inds = x .∈ [ival]
-        deg = min(degmax, max(1, floor(Int, √(sum(inds) - 1))))
+        n = ξ .∈ [ival]
+        P = min(degmax, max(1, floor(Int, √(sum(n) - 1))))
 
-        ϕ = chebyshevt(0:deg, ival)
+        ϕ = chebyshevt(0:P, ival)
         ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = spzeros(deg + 1, length(x[inds]))
+        Vₘ = spzeros(P + 1, length(ξ[n]))
 
         # Polynomial moments around point
-        μᵢ = zeros(deg + 1)
+        μₘ = zeros(P + 1)
 
         # Fill in
-        for d = 1:deg+1
-            Vᵢ[d, :] = ϕ[d].(x[inds])
-            μᵢ[d] = (ϕ_int[d](ival.right) - ϕ_int[d](ival.left)) / ival_length
+        for p = 1:(P+1)
+            Vₘ[p, :] = ϕ[p].(ξ[n])
+            μₘ[p] = (ϕ_int[p](ival.right) - ϕ_int[p](ival.left)) / ival_length
         end
 
         # Fit weights
-        wᵢ = Vᵢ \ μᵢ
-        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
+        wₘ = ridge(Vₘ, μₘ, λ)
+        # wₘ = Vₘ \ μₘ
+        # wₘ = nonneg_lsq(Vₘ, μₘ)
 
         # Store weights
-        W[i, inds] .= wᵢ[:] ./ sum(wᵢ)
+        W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)
 
     W
 end
 
-function filter_matrix(f::TopHatFilter, domain::PeriodicIntervalDomain, N, degmax = 10)
-    x = discretize(domain, N)
+function filter_matrix(
+    f::TopHatFilter,
+    domain::PeriodicIntervalDomain,
+    M,
+    N,
+    degmax = 10,
+    λ = 0,
+)
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     Δx = x[2] - x[1]
     L = (domain.right - domain.left)
-    mid = (domain.left + domain.right) / 2
-    ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
 
-    W = spzeros(N, N)
-    for i = 1:N
+    W = spzeros(M, N)
+    for m = 1:M
         # Point
-        xᵢ = x[i]
+        xₘ = x[m]
 
         # Filter width at point
-        hᵢ = h(xᵢ)
+        hₘ = h(xₘ)
 
         # Indices of integration points inside domain
-        ival = xᵢ ± hᵢ
-        indsleft = x .+ L .∈ [ival]
-        indsmid = x .∈ [ival]
-        indsright = x .- L .∈ [ival]
-        j = indsleft .| indsmid .| indsright
-        j = mapreduce(s -> circshift(j, s), .|, [-1, 0, 1])
-        xⱼ = (x.+(xᵢ.-x.>L/2)L.-(x.-xᵢ.>L/2)L)[j]
-        Nₘ = length(xⱼ) - 1
+        ival = xₘ ± hₘ
+        n_left = ξ .+ L .∈ [ival]
+        n_mid = ξ .∈ [ival]
+        n_right = ξ .- L .∈ [ival]
+        n = n_left .| n_mid .| n_right
+        n = mapreduce(s -> circshift(n, s), .|, [-1, 0, 1])
+        ξₙ = (ξ.+(xₘ.-ξ.>L/2)L.-(ξ.-xₘ.>L/2)L)[n]
+        Nₘ = length(ξₙ) - 1
 
-        # deg = min(degmax, max(1, floor(Int, √(N - 1))))
-        deg = min(degmax, Nₘ)
-        # ϕ = chebyshevt(0:deg, ival)
-        ϕ = chebyshevt(0:deg, xᵢ ± 3hᵢ)
+        # P = min(degmax, max(1, floor(Int, √(Nₘ - 1))))
+        P = min(degmax, Nₘ)
+        # ϕ = chebyshevt(0:P, ival)
+        ϕ = chebyshevt(0:P, xₘ ± 3hₘ)
         ϕ_int = integrate.(ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = spzeros(deg + 1, Nₘ + 1)
+        Vₘ = spzeros(P + 1, Nₘ + 1)
 
         # Polynomial moments around point
-        μᵢ = zeros(deg + 1)
+        zₘ = zeros(P + 1)
 
         # Fill in
-        for d = 1:deg+1
-            Vᵢ[d, :] = ϕ[d].(xⱼ)
-            μᵢ[d] = (ϕ_int[d](ival.right) - ϕ_int[d](ival.left)) / 2hᵢ
+        for p = 1:(P+1)
+            Vₘ[p, :] = ϕ[p].(ξₙ)
+            zₘ[p] = (ϕ_int[p](ival.right) - ϕ_int[p](ival.left)) / 2hₘ
         end
 
         # Fit weights
-        wᵢ = Vᵢ \ μᵢ
-        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
-        # wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, Nₘ + 1, Nₘ + 1)) \ Vᵢ'μᵢ
+        wₘ = ridge(Vₘ, zₘ, λ)
+        # wₘ = Vₘ \ zₘ
+        # wₘ = nonneg_lsq(Vₘ, zₘ)
 
         # Store weights
-        W[i, j] .= wᵢ[:] #./ sum(wᵢ)
+        W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)
 
@@ -117,53 +134,54 @@ end
 function filter_matrix(
     f::ConvolutionalFilter,
     domain::ClosedIntervalDomain,
+    M,
     N,
-    degmax = 100,
+    degmax = 10,
+    λ = 0,
 )
-    x = discretize(domain, N)
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     Δx = x[2] - x[1]
-    L = (domain.right - domain.left)
-    mid = (domain.left + domain.right) / 2
     ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
     G = f.kernel
-    W = spzeros(N + 1, N + 1)
-    for i = 1:N+1
+    W = spzeros(M + 1, N + 1)
+    for m = 1:(M+1)
         # Point
-        xᵢ = x[i]
+        xₘ = x[m]
 
         # Filter width at point
-        hᵢ = h(xᵢ)
+        hₘ = h(xₘ)
 
         # Indices of integration points inside domaain
-        ival = (xᵢ ± hᵢ) ∩ ival_domain
-        j = x .∈ [ival]
-        xⱼ = x[j]
-        Nₘ = length(xⱼ)
+        ival = (xₘ ± hₘ) ∩ ival_domain
+        n = ξ .∈ [ival]
+        ξₙ = ξ[n]
+        Nₘ = length(ξₙ)
 
-        deg = min(degmax, Nₘ - 1)
-        ϕ = chebyshevt(0:deg, ival)
+        P = min(degmax, Nₘ - 1)
+        ϕ = chebyshevt(0:P, ival)
 
         # Normalized kernel Fun
-        kern = Fun(x -> G(x - xᵢ), ival)
+        kern = Fun(ξ -> G(ξ - xₘ), ival)
         kern /= sum(kern)
 
         # Polynomial moments around point
-        μᵢ = sum.(kern .* ϕ)
+        zₘ = sum.(kern .* ϕ)
 
         # Polynomials evaluated at integration points
-        Vᵢ = spzeros(deg + 1, Nₘ)
-        for d = 1:deg+1
-            Vᵢ[d, :] = ϕ[d].(xⱼ)
+        Vₘ = spzeros(P + 1, Nₘ)
+        for p = 1:(P+1)
+            Vₘ[p, :] = ϕ[p].(ξₙ)
         end
 
         # Fit weights
-        wᵢ = Vᵢ \ μᵢ
-        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
-        # wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, Nₘ, Nₘ)) \ Vᵢ'μᵢ
+        wₘ = ridge(Vₘ, zₘ, λ)
+        # wₘ = Vₘ \ zₘ
+        # wₘ = nonneg_lsq(Vₘ, zₘ)
 
         # Store weights
-        W[i, j] .= wᵢ[:] ./ sum(wᵢ)
+        W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)
 
@@ -173,58 +191,60 @@ end
 function filter_matrix(
     f::ConvolutionalFilter,
     domain::PeriodicIntervalDomain,
+    M,
     N,
     degmax = 10,
+    λ = 0,
 )
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     L = (domain.right - domain.left)
-    mid = (domain.left + domain.right) / 2
     h = f.width
     G = f.kernel
-    x = discretize(domain, N)
-    W = spzeros(N, N)
-    for i = 1:N
+    W = spzeros(M, N)
+    for m = 1:M
         # Point
-        xᵢ = x[i]
+        xₘ = x[m]
 
         # Filter width at point
-        hᵢ = h(xᵢ)
+        hₘ = h(xₘ)
 
         # Indices of integration points inside domain
-        ival = (xᵢ ± hᵢ)
-        indsleft = x .+ L .∈ [ival]
-        indsmid = x .∈ [ival]
-        indsright = x .- L .∈ [ival]
-        j = indsleft .| indsmid .| indsright
-        xⱼ = (x+L*indsleft-L*indsright)[j]
-        Nₘ = length(xⱼ)
+        ival = (xₘ ± hₘ)
+        n_left = ξ .+ L .∈ [ival]
+        n_mid = ξ .∈ [ival]
+        n_right = ξ .- L .∈ [ival]
+        n = n_left .| n_mid .| n_right
+        ξₙ = (ξ+L*indsleft-L*indsright)[n]
+        Nₘ = length(ξₙ)
 
-        # deg = min(degmax, max(1, floor(Int, √(Nₘ - 1))))
-        deg = min(degmax, sum(j))
-        ϕ = chebyshevt(0:deg, ival)
+        # P = min(degmax, max(1, floor(Int, √(Nₘ - 1))))
+        P = min(degmax, sum(n))
+        ϕ = chebyshevt(0:P, ival)
 
         # Normalized kernel Fun
-        kern = Fun(x -> G(x - xᵢ), ival)
+        kern = Fun(ξ -> G(ξ - xₘ), ival)
         kern /= sum(kern)
 
         # Polynomials evaluated at integration points
-        Vᵢ = spzeros(deg + 1, Nₘ)
+        Vₘ = spzeros(P + 1, Nₘ)
 
         # Polynomial moments around point
-        μᵢ = zeros(deg + 1)
+        zₘ = zeros(P + 1)
 
         # Fill in
-        for d = 1:deg+1
-            Vᵢ[d, :] = ϕ[d].(xⱼ)
-            μᵢ[d] = sum(kern * ϕ[d])
+        for p = 1:(P+1)
+            Vₘ[p, :] = ϕ[p].(ξₙ)
+            zₘ[p] = sum(kern * ϕ[p])
         end
 
         # Fit weights
-        # wᵢ = Vᵢ \ μᵢ
-        # wᵢ = nonneg_lsq(Vᵢ, μᵢ)
-        wᵢ = (Vᵢ'Vᵢ + sparse(1e-8I, Nₘ, Nₘ)) \ Vᵢ'μᵢ
+        wₘ = ridge(Vₘ, zₘ, λ)
+        # wₘ = Vₘ \ zₘ
+        # wₘ = nonneg_lsq(Vₘ, zₘ)
 
         # Store weights
-        W[i, j] .= wᵢ[:] ./ sum(wᵢ)
+        W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)
 

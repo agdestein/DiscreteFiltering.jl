@@ -5,7 +5,7 @@ Approximate inverse of discrete filtering matrix, given filter `filter`.
 """
 function reconstruction_matrix end
 
-function reconstruction_matrix(::IdentityFilter, ::AbstractIntervalDomain, M, N) 
+function reconstruction_matrix(::IdentityFilter, ::AbstractIntervalDomain, M, N)
     x = discretize(domain, M)
     ξ = discretize(domain, N)
     interpolation_matrix(ξ, x)
@@ -14,45 +14,49 @@ end
 function reconstruction_matrix(
     filter::TopHatFilter,
     domain::ClosedIntervalDomain,
+    M,
     N,
-    degmax = 100,
+    degmax = 10,
+    λ = 0,
 )
-    x = discretize(domain, N)
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     h = filter.width
 
     # Get reconstruction weights for each point
-    R = spzeros(N + 1, N + 1)
-    for i = 1:N+1
+    R = spzeros(N + 1, M + 1)
+    for n = 1:(N+1)
         # Point
-        xᵢ = x[i]
+        ξₙ = ξ[n]
 
-        dists = abs.(x .- xᵢ)
+        dists = abs.(x .- ξₙ)
 
-        # Find j such that xᵢ is reachable from xⱼ
-        j = dists .< h.(x)
+        # Find m such that ξₙ is reachable from xₘ
+        m = dists .< h.(x)
 
         # Polynomial degree (Taylor series order)
-        deg = min(degmax, max(1, floor(Int, √sum(j))))
+        Q = min(degmax, max(1, floor(Int, √sum(m))))
 
         # Vandermonde matrix
-        d = 1:deg
-        xⱼ = x[j]'
-        hⱼ = h.(xⱼ)
-        aⱼ = max.(xⱼ - hⱼ, domain.left)
-        bⱼ = min.(xⱼ + hⱼ, domain.right)
-        Δhⱼ = bⱼ - aⱼ
+        d = 1:Q
+        xₘ = x[m]'
+        hₘ = h.(xₘ)
+        aₘ = max.(xₘ - hₘ, domain.left)
+        bₘ = min.(xₘ + hₘ, domain.right)
+        Δhₘ = bₘ - aₘ
 
-        Vᵢ = @. 1 / (Δhⱼ * factorial(d)) * ((bⱼ - xᵢ)^d - (aⱼ - xᵢ)^d)
+        Zₙ = @. 1 / (Δhₘ * factorial(d)) * ((bₘ - ξₙ)^d - (aₘ - ξₙ)^d)
 
         # Right-hand side
-        μᵢ = fill(0.0, deg)
-        μᵢ[1] = 1.0
+        vₙ = fill(0.0, Q)
+        vₙ[1] = 1.0
 
         # Fit weights
-        rᵢ = Vᵢ \ μᵢ
+        rₙ = ridge(Zₙ, vₙ)
+        # rₙ = Zₙ \ vₙ
 
         # Store weights
-        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
+        R[n, m] .= rₙ[:] ./ sum(rₙ)
     end
     dropzeros!(R)
 
@@ -62,119 +66,123 @@ end
 # function reconstruction_matrix(
 #     filter::TopHatFilter,
 #     domain::PeriodicIntervalDomain,
+#     M,
 #     N,
-#     degmax = 100,
+#     degmax = 10,
+#     λ = 0,
 # )
+#     x = discretize(domain, M)
+#     ξ = discretize(domain, N)
 #     L = (domain.right - domain.left)
-#     mid = (domain.left + domain.right) / 2
-#     x = discretize(domain, N)
 #     h = filter.width
-
+#
 #     # Get reconstruction weights for each point
-#     R = spzeros(N, N)
-#     for i = 1:N
+#     R = spzeros(N, M)
+#     for n = 1:N
 #         # Point
-#         xᵢ = x[i]
-
-#         # Move x by L * (shifts - 2) to get closer to xᵢ
-#         dists = @. abs(xᵢ - x - [-L 0 L])
+#         ξₙ = ξ[n]
+#
+#         # Move x by L * (shifts - 2) to get closer to ξₙ
+#         dists = @. abs(ξₙ - x - [-L 0 L])
 #         mininds = argmin(dists, dims = 2)
-#         shifts = [mininds[j].I[2] for j in eachindex(mininds)]
-
-#         # Find j such that xᵢ is reachable from xⱼ
-#         j = dists[mininds][:] .< h.(x)
-
+#         shifts = [mininds[m].I[2] for m in eachindex(mininds)]
+#
+#         # Find m such that ξₙ is reachable from xₘ
+#         m = dists[mininds][:] .< h.(x)
+#
 #         # Polynomial degree (Taylor series order)
-#         deg = min(degmax, max(1, floor(Int, √sum(j))))
-
+#         Q = min(degmax, max(1, floor(Int, √sum(m))))
+#
 #         # Vandermonde matrix
-#         d = 1:deg
-#         xⱼ = x[j]'
-#         hⱼ = h.(xⱼ)
-#         sⱼ = L * (shifts[j]' .- 2)
-
-#         Vᵢ = @. 1 / (2hⱼ * factorial(d)) * ((xⱼ + sⱼ + hⱼ - xᵢ)^d - (xⱼ + sⱼ - hⱼ - xᵢ)^d)
-
+#         d = 1:Q
+#         xₘ = x[m]'
+#         hₘ = h.(xₘ)
+#         sₘ = L * (shifts[m]' .- 2)
+#
+#         Zₙ = @. 1 / (2hₘ * factorial(d)) * ((xₘ + sₘ + hₘ - ξₙ)^d - (xₘ + sₘ - hₘ - ξₙ)^d)
+#
 #         # Right-hand side
-#         μᵢ = fill(0.0, deg)
-#         μᵢ[1] = 1.0
-
+#         vₙ = fill(0.0, Q)
+#         vₙ[1] = 1.0
+#
 #         # Fit weights
-#         rᵢ = Vᵢ \ μᵢ
-
+#         rₙ = ridge(Zₙ, vₙ)
+#         # rₙ = Zₙ \ vₙ
+#
 #         # Store weights
-#         R[i, j] .= rᵢ[:] ./ sum(rᵢ)
+#         R[n, m] .= rₙ[:] ./ sum(rₙ)
 #     end
 #     dropzeros!(R)
-
+#
 #     R
 # end
 
 function reconstruction_matrix(
     filter::TopHatFilter,
     domain::PeriodicIntervalDomain,
+    M,
     N,
-    λ = 1e-6,
-    degmax = 100,
+    degmax = 10,
+    λ = 0,
 )
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     L = (domain.right - domain.left)
     h = filter.width
-    x = discretize(domain, N)
 
     # Get reconstruction weights for each point
-    R = spzeros(N, N)
-    for i = 1:N
+    R = spzeros(N, M)
+    for n = 1:N
         # Point
-        xᵢ = x[i]
+        ξₙ = ξ[n]
 
-        dists = @. abs(xᵢ - x - [-L 0 L])
+        dists = @. abs(ξₙ - x - [-L 0 L])
 
-        # Move x by L * (shifts - 2) to get closer to xᵢ
+        # Move x by L * (shifts - 2) to get closer to ξₙ
         mininds = argmin(dists, dims = 2)
-        shifts = [mininds[j].I[2] for j in eachindex(mininds)]
+        shifts = [mininds[m].I[2] for m in eachindex(mininds)]
 
-        # Find j such that xᵢ is reachable from xⱼ and include one point outside
-        j = dists[mininds][:] .< 1.5h.(x)
-        # j = mapreduce(s -> circshift(j, s), .|, [-1, 0, 1])
+        # Find m such that ξₙ is reachable from xₘ and include one point outside
+        m = dists[mininds][:] .< 1.5h.(x)
+        # m = mapreduce(s -> circshift(m, s), .|, [-1, 0, 1])
 
         # Vandermonde matrix
-        hⱼ = h.(x[j]')
-        sⱼ = L * (shifts[j]' .- 2)
-        xⱼ = x[j]' + sⱼ
+        hₘ = h.(x[m]')
+        sₘ = L * (shifts[m]' .- 2)
+        xₘ = x[m]' + sₘ
 
         # Polynomial degree (Taylor series order)
-        Mₙ = length(xⱼ)
-        deg = min(degmax, Mₙ - 1)
-        # deg = min(degmax, max(1, floor(Int, √sum(j))))
+        Mₙ = length(xₘ)
+        Q = min(degmax, Mₙ - 1)
+        # Q = min(degmax, max(1, floor(Int, √Mₙ)))
 
         # Vandermonde matrix
-        # aⱼ = max.(xⱼ - hⱼ, domain.left - 0.001L)
-        # bⱼ = min.(xⱼ + hⱼ, domain.right + 0.001L)
-        # Δhⱼ = bⱼ - aⱼ
-        ivals = xⱼ .± hⱼ
-        # ivals = Interval.(aⱼ, bⱼ)
+        # aₘ = max.(xₘ - hₘ, domain.left - 0.001L)
+        # bₘ = min.(xₘ + hₘ, domain.right + 0.001L)
+        # Δhₘ = bₘ - aₘ
+        ivals = xₘ .± hₘ
+        # ivals = Interval.(aₘ, bₘ)
 
-
-        ϕ = chebyshevt.(0:deg, [minimum(xⱼ - 3hⱼ)..maximum(xⱼ + 3hⱼ)])
-        # ϕ = chebyshevt.(0:deg, [domain.left..domain.right])
+        ϕ = chebyshevt.(0:Q, [minimum(xₘ - 3hₘ)..maximum(xₘ + 3hₘ)])
+        # ϕ = chebyshevt.(0:Q, [domain.left..domain.right])
         ϕ_int = integrate.(ϕ)
 
-        Z = spzeros(deg + 1, Mₙ)
-        v = zeros(deg + 1)
-        for k = 1:(deg+1)
-            for (kk, ival) ∈ enumerate(ivals)
-                Z[k, kk] =
-                    (ϕ_int[k](ival.right) - ϕ_int[k](ival.left)) / (ival.right - ival.left)
+        Zₙ = spzeros(Q + 1, Mₙ)
+        vₙ = zeros(Q + 1)
+        for q = 1:Q+1
+            for (i, ival) ∈ enumerate(ivals)
+                Zₙ[q, i] =
+                    (ϕ_int[q](ival.right) - ϕ_int[q](ival.left)) / (ival.right - ival.left)
             end
-            v[k] = ϕ[k](xᵢ)
+            vₙ[q] = ϕ[q](ξₙ)
         end
 
-        rᵢ = Z \ v
-        # rᵢ = (Z'Z + λ*I) \ (Z'v)
-        # rᵢ = fit(LassoRegression(λ; fit_intercept = false), Z, v)
+        rₙ = ridge(Zₙ, vₙ, λ)
+        # rₙ = Zₙ \ vₙ
+        # rₙ = fit(LassoRegression(λ; fit_intercept = false), Zₙ, vₙ)
 
         # Store weights
-        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
+        R[n, m] .= rₙ[:] ./ sum(rₙ)
     end
     dropzeros!(R)
 
@@ -184,60 +192,61 @@ end
 function reconstruction_matrix(
     filter::ConvolutionalFilter,
     domain::ClosedIntervalDomain,
+    M,
     N,
-    degmax = 100,
+    degmax = 10,
+    λ = 0,
 )
-    x = discretize(domain, N)
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     Δx = x[2] - x[1]
-    L = (domain.right - domain.left)
-    mid = (domain.left + domain.right) / 2
     Ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = filter.width
     G = filter.kernel
 
     # Get reconstruction weights for each point
-    R = spzeros(N + 1, N + 1)
-    for i = 1:N+1
+    R = spzeros(N + 1, M + 1)
+    for n = 1:(N+1)
         # Point
-        xᵢ = x[i]
+        ξₙ = ξ[n]
 
-        # Find j such that xᵢ is reachable from xⱼ
-        dists = abs.(x .- xᵢ)
-        j = dists .< h.(x)
+        # Find m such that ξₙ is reachable from xₘ
+        dists = abs.(x .- ξₙ)
+        m = dists .< h.(x)
 
         # Polynomial degree (Taylor series order)
-        Mₙ = sum(j)
-        deg = sum(j) - 1
+        Mₙ = sum(m)
+        Q = sum(m) - 1
 
-        xⱼ = x[j]
-        hⱼ = h.(xⱼ)
-        aⱼ = max.(xⱼ - hⱼ, Ival_domain.left)
-        bⱼ = min.(xⱼ + hⱼ, Ival_domain.right)
-        # Δhⱼ = bⱼ - aⱼ
-        # ivals = xⱼ .± hⱼ
-        ivals = Interval.(aⱼ, bⱼ)
+        xₘ = x[m]
+        hₘ = h.(xₘ)
+        aₘ = max.(xₘ - hₘ, Ival_domain.left)
+        bₘ = min.(xₘ + hₘ, Ival_domain.right)
+        # Δhₘ = bₘ - aₘ
+        # ivals = xₘ .± hₘ
+        ivals = Interval.(aₘ, bₘ)
 
-        # ϕ = chebyshevt.(0:deg, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
-        ϕ = chebyshevt.(0:deg, [minimum(aⱼ)..maximum(bⱼ)])
-        # ϕ = chebyshevt.(0:deg, [Ival_domain])
+        # ϕ = chebyshevt.(0:Q, [minimum(xₘ - hₘ)..maximum(xₘ + hₘ)])
+        ϕ = chebyshevt.(0:Q, [minimum(aₘ)..maximum(bₘ)])
+        # ϕ = chebyshevt.(0:Q, [Ival_domain])
 
-        # Polynomials evaluated at xᵢ
-        v = [ϕ(xᵢ) for ϕ ∈ ϕ]
+        # Polynomials evaluated at ξₙ
+        vₙ = [ϕ(ξₙ) for ϕ ∈ ϕ]
 
         # Moment matrix
-        Z = spzeros(deg + 1, Mₙ)
-        for k = 1:Mₙ
-            ival = ivals[k]
-            ϕₖ = Fun.(ϕ, [ival])
-            kern = Fun(x -> G(x - xⱼ[k]), ival)
-            Z[:, k] = sum.(kern .* ϕₖ) / sum(kern)
+        Zₙ = spzeros(Q + 1, Mₙ)
+        for mm = 1:Mₙ
+            ival = ivals[mm]
+            ϕₘₘ = Fun.(ϕ, [ival])
+            kern = Fun(x -> G(x - xₘ[mm]), ival)
+            Zₙ[:, mm] = sum.(kern .* ϕₘₘ) / sum(kern)
         end
 
-        rᵢ = Z \ v
-        # rᵢ = (Z'Z + 1e-8I) \ (Z'v)
+        rₙ = ridge(Zₙ, vₙ, λ)
+        # rₙ = Zₙ \ vₙ
 
         # Store weights
-        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
+        R[n, m] .= rₙ[:] ./ sum(rₙ)
     end
     dropzeros!(R)
 
@@ -247,69 +256,71 @@ end
 function reconstruction_matrix(
     filter::ConvolutionalFilter,
     domain::PeriodicIntervalDomain,
+    M,
     N,
-    degmax = 100,
+    degmax = 10,
+    λ = 0,
 )
-    x = discretize(domain, N)
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
     Δx = x[2] - x[1]
     L = (domain.right - domain.left)
-    mid = (domain.left + domain.right) / 2
     h = filter.width
     G = filter.kernel
 
     # Get reconstruction weights for each point
-    R = spzeros(N, N)
-    for i = 1:N
+    R = spzeros(N, M)
+    for n = 1:N
         # Point
-        xᵢ = x[i]
+        ξₙ = ξ[n]
 
-        dists = @. abs(xᵢ - x - [-L 0 L])
+        dists = @. abs(ξₙ - x - [-L 0 L])
 
-        # Move x by L * (shifts - 2) to get closer to xᵢ
+        # Move x by L * (shifts - 2) to get closer to ξₙ
         mininds = argmin(dists, dims = 2)
-        shifts = [mininds[j].I[2] for j in eachindex(mininds)]
+        shifts = [mininds[m].I[2] for m in eachindex(mininds)]
 
-        # Find j such that xᵢ is reachable from xⱼ
-        j = dists[mininds][:] .< h.(x)
+        # Find m such that ξₙ is reachable from xₘ
+        m = dists[mininds][:] .< h.(x)
 
         # Vandermonde matrix
-        sⱼ = L * (shifts[j]' .- 2)
-        xⱼ = x[j]' + sⱼ
-        hⱼ = h.(xⱼ)
+        sₘ = L * (shifts[m]' .- 2)
+        xₘ = x[m]' + sₘ
+        hₘ = h.(xₘ)
 
         # Polynomial degree (Taylor series order)
-        deg = sum(j) - 1
-        Mₙ = sum(j)
-        # deg = min(degmax, max(1, floor(Int, √sum(j))))
+        Q = sum(m) - 1
+        Mₙ = sum(m)
+        # Q = min(degmax, max(1, floor(Int, √Mₙ)))
 
         # Vandermonde matrix
-        aⱼ = max.(xⱼ - hⱼ, domain.left - Δx / 1000)
-        bⱼ = min.(xⱼ + hⱼ, domain.right + Δx / 1000)
-        # Δhⱼ = bⱼ - aⱼ
-        ivals = xⱼ .± hⱼ
-        # ivals = Interval.(aⱼ, bⱼ)
+        aₘ = max.(xₘ - hₘ, domain.left - Δx / 1000)
+        bₘ = min.(xₘ + hₘ, domain.right + Δx / 1000)
+        # Δhₘ = bₘ - aₘ
+        ivals = xₘ .± hₘ
+        # ivals = Interval.(aₘ, bₘ)
 
-        ϕ = chebyshevt.(0:deg, [minimum(xⱼ - hⱼ)..maximum(xⱼ + hⱼ)])
-        # ϕ = chebyshevt.(0:deg, [domain.left..domain.right])
+        ϕ = chebyshevt.(0:Q, [minimum(xₘ - hₘ)..maximum(xₘ + hₘ)])
+        # ϕ = chebyshevt.(0:Q, [domain.left..domain.right])
 
-        # Polynomials evaluated at xᵢ
-        v = [ϕ(xᵢ) for ϕ ∈ ϕ]
+        # Polynomials evaluated at ξₙ
+        vₙ = [ϕ(ξₙ) for ϕ ∈ ϕ]
 
         # Polynomial moments
-        Z = spzeros(deg + 1, Mₙ)
-        for k = 1:Mₙ
-            ival = ivals[k]
-            ϕⱼ = Fun.(ϕ, [ival])
-            kern = Fun(x -> G(x - xⱼ[k]), ival)
+        Zₙ = spzeros(Q + 1, Mₙ)
+        for mm = 1:Mₙ
+            ival = ivals[mm]
+            ϕₘₘ = Fun.(ϕ, [ival])
+            kern = Fun(x -> G(x - xₘ[mm]), ival)
             kern /= sum(kern)
-            Z[:, k] = sum.(kern .* ϕⱼ)
+            Zₙ[:, mm] = sum.(kern .* ϕₘₘ)
         end
 
-        rᵢ = Z \ v
-        # rᵢ = (Z'Z + 1e-8I) \ (Z'v)
+        rₙ = ridge(Zₙ, vₙ, λ)
+        # rₙ = Zₙ \ vₙ
 
         # Store weights
-        R[i, j] .= rᵢ[:] ./ sum(rᵢ)
+        R[n, m] .= rₙ[:] ./ sum(rₙ)
     end
     dropzeros!(R)
 

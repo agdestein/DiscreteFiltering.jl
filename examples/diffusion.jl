@@ -12,9 +12,11 @@ domain = ClosedIntervalDomain(a, b)
 
 
 ## Discretization
-n = 200
-x = discretize(domain, n)
-Δx = (b - a) / n
+N = 200
+M = N
+x = discretize(domain, M)
+ξ = discretize(domain, N)
+Δx = (b - a) / N
 
 
 ## Filter
@@ -30,10 +32,10 @@ filter = GaussianFilter(h, Δx / 2)
 # filter = ConvolutionalFilter(h, x -> (-Δx / 2 ≤ x ≤ Δx / 2) / Δx)
 
 # Filter matrix
-W = filter_matrix(filter, domain, n)
+W = filter_matrix(filter, domain, M, N)
 
 ## Equations
-f = (x, t) -> 0.0
+f = (ξ, t) -> 0.0
 g_a = t -> 0.0
 g_b = t -> 0.0
 equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
@@ -50,7 +52,7 @@ tols = (; abstol = 1e-6, reltol = 1e-4)
 
 
 ## Plot filter
-plot(x, h)
+plot(ξ, h)
 ylims!((0, ylims()[2]))
 
 
@@ -72,10 +74,10 @@ end
 
 
 ## Discrete initial conditions
-uₕ = u₀.(x)
+uₕ = u₀.(ξ)
 ūₕ = ū₀.(x)
 
-plot(x, uₕ, label = "Unfiltered")
+plot(ξ, uₕ, label = "Unfiltered")
 plot!(x, ūₕ, label = "Filtered")
 title!("Initial conditions")
 
@@ -85,7 +87,8 @@ sol = solve(
     equation,
     u₀,
     (0.0, T),
-    n;
+    M,
+    N;
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
@@ -96,7 +99,7 @@ title!("Solution")
 
 
 ## Solve filtered-and-then-discretized problem with ADBC
-ū_adbc = solve_adbc(equation_filtered, u₀, (0.0, T), n, T / 100_000)
+ū_adbc = solve_adbc(equation_filtered, u₀, (0.0, T), M, T / 100_000)
 plot(x, uₕ, label = "Initial")
 # plot!(x, ūₕ, label = "Initial filtered")
 plot!(x, ū_adbc, label = "Filtered-then-discretized (ADBC)")
@@ -108,26 +111,27 @@ sol_allbar = solve(
     equation_filtered,
     u₀,
     (0.0, T),
-    n;
+    M,
+    N;
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
 )
 
-plot(x, uₕ, label = "Initial")
+plot(ξ, uₕ, label = "Initial")
 # plot!(x, ūₕ, label = "Initial discretized-then-filtered")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
 title!("Solution")
 
 
 ## Comparison
-plot(x, uₕ, label = "Initial")
+plot(ξ, uₕ, label = "Initial")
 # plot!(x, ūₕ, label = "Initial filtered")
-plot!(x, sol(t), label = "Discretized")
+plot!(ξ, sol(t), label = "Discretized")
 # plot!(x, sol_bar(t), label = "Filtered-then-discretized")
 plot!(x, ū_adbc, label = "Filtered-then-discretized")
 plot!(x, sol_allbar(t), label = "Discretized-then-filtered")
-# plot!(x, [u.(x, t), ū.(x, t)], label = "Exact")
+# plot!(ξ, [u.(ξ, t), ū.(ξ, t)], label = "Exact")
 ylims!(minimum(uₕ), maximum(uₕ))
 title!("Solution")
 
@@ -141,7 +145,7 @@ err_allbar = abs.(sol_allbar(t) - ū_exact) ./ maximum(abs.(ū_exact))
 
 ##
 plot(yaxis = :log)
-# plot!(x, err, label = "Unfiltered discretized")
+# plot!(ξ, err, label = "Unfiltered discretized")
 plot!(x, err_bar, label = "Filtered-then-discretized (ADBC)")
 plot!(x, err_allbar, label = "Discretized-then-filtered")
 title!("Relative error")

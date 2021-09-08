@@ -17,7 +17,6 @@ domain = ClosedIntervalDomain(a, b)
 
 # Exact solution (heat equation, Borggaard test case)
 u = t + sin(2π * x) + sin(8π * x)
-u_int = t * x - 1 / 2π * cos(2π * x) - 1 / 8π * cos(8π * x)
 
 # Exact solution (heat equation, more complicated test case)
 # u = 1 + sin(t) * (1 - 8 / 10 * x^2) + exp(-t) / 15 * sin(20π * x) + 1 / 5 * sin(10x)
@@ -48,7 +47,8 @@ uₓ = eval(build_function(uₓ, x, t))
 # tols = (; abstol = 1e-6, reltol = 1e-4)
 tols = (; abstol = 1e-9, reltol = 1e-8)
 
-n = 20
+N = 20
+M = N
 
 ## Solve
 
@@ -59,8 +59,9 @@ tspace = LinRange(0, T, nₜ + 1)
 tlist = (0.0, T)
 
 # Discretization
-x = discretize(domain, n)
-Δx = (b - a) / n
+x = discretize(domain, M)
+ξ = discretize(domain, N)
+Δx = (b - a) / N
 
 # h(x) = Δx / 2
 # filter = TopHatFilter(h)
@@ -74,21 +75,22 @@ filter = GaussianFilter(h, σ)
 equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
 equation_filtered = DiffusionEquation(domain, filter, f, g_a, g_b)
 
-u₀ = x -> u(x, 0.0)
-uₜ = x -> u(x, T)
+u₀ = ξ -> u(ξ, 0.0)
+uₜ = ξ -> u(ξ, T)
 
 # Exact filtered solution
 ū = apply_filter(uₜ, filter, domain)
 
 # Exact extended-filtered solution (for ADBC)
-ū_ext = t -> apply_filter_extend(x -> u(x, t), filter, domain)
+ū_ext = t -> apply_filter_extend(ξ -> u(ξ, t), filter, domain)
 
 # Solve discretized problem
 sol = solve(
     equation,
     u₀,
     tlist,
-    n;
+    M,
+    N;
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
@@ -99,22 +101,24 @@ sol_bar = solve(
     equation_filtered,
     u₀,
     tlist,
-    n;
+    M,
+    N;
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
 )
 
 # Solve filtered-then-discretized problem with ADBC
-ū_adbc = solve_adbc(equation_filtered, u₀, tlist, n, T / nₜ; ū_ext, uₓ)
+ū_adbc = solve_adbc(equation_filtered, u₀, tlist, M, T / nₜ; ū_ext, uₓ)
 
 # Relative error
-u_exact = u.(x, T)
+u_exact = u.(ξ, T)
 ū_exact = ū.(x)
 ū_ext_exact = t -> ū_ext(t).(x)
 err = (sol.u[end] .- u_exact)
 err_bar = (sol_bar.u[end] .- ū_exact)
 err_adbc = (ū_adbc .- ū_ext_exact)
+err_adbc = (ū_adbc .- mapreduce(ū_ext_exact, hcat, tspace))
 
 ## Set GR backend for fast plotting
 gr()
@@ -131,16 +135,17 @@ p = plot(
     # size = (400, 300),
     legend = :topright,
 )
-plot!(p, x, err, label = "Discretized")
+plot!(p, ξ, err, label = "Discretized")
 plot!(p, x, err_bar, label = "Discretized-then-filtered")
 plot!(p, x, err_adbc, label = "ADBC")
+plot!(p, x, err_adbc[:, end], label = "ADBC")
 display(p)
-# savefig(p, "output/diffusion/error$n.tikz")
+# savefig(p, "output/diffusion/error$N.tikz")
 
 ## Plot exact solution
 p = plot(xlabel = raw"$x$", size = (400, 300), legend = :topright)
 for t ∈ LinRange(0.0, T, 2)
-    plot!(p, LinRange(0, 1, 101), x -> u.(x, t), label = "\$t = $t\$")
+    plot!(p, LinRange(a, b, 101), ξ -> u.(ξ, t), label = "\$t = $t\$")
 end
 display(p)
 # savefig(p, "output/diffusion/solution.tikz")

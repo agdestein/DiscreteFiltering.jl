@@ -25,77 +25,78 @@ u_int(x, t) = -cos(x - t) + 3 / 25 * sin(5(x - t)) - 1 / 25 / 20 * cos(20(x - 1 
 subspacedim = 500
 
 # Number of mesh points
-N = floor.(Int, 10 .^ LinRange(2, 4, 20))
-# N = [100]
+NN = floor.(Int, 10 .^ LinRange(2, 4, 20))
 
 # Errors
-err = zeros(length(N))
-err_bar = zeros(length(N))
-err_allbar = zeros(length(N))
+err = zeros(length(NN))
+err_bar = zeros(length(NN))
+err_allbar = zeros(length(NN))
 
 ## Solve
-@time @progress for (i, n) ∈ enumerate(N)
-    enumerate(N)
+@time @progress for (i, N) ∈ enumerate(NN)
+    M = N
 
-    println("Solving for n = $n")
+    println("Solving for M = $M and N = $N")
 
     # Discretization
-    x = discretize(domain, n)
-    Δx = (b - a) / n
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
+    Δx = (b - a) / N
 
     # Filter
     # h(x) = Δx / 2
-    h₀ = 2.1Δx
+    # h₀ = 2.1Δx
+    h₀ = (b - a) / 200
     h(x) = h₀ * (1 - 1 / 2 * cos(x))
-    f = TopHatFilter(h)
-    # f = ConvolutionalFilter()
-
-    # Exact filtered solution
-    ū(x, t) = 1 / 2h(x) * (u_int(x + h(x), t) - u_int(x - h(x), t))
+    filter = TopHatFilter(h)
+    # filter = ConvolutionalFilter(x -> 2h(x), x -> abs(x) ≤ h(x) ? 1/ 2h(x) : zero(x))
 
     # Equations
     equation = AdvectionEquation(domain, IdentityFilter())
-    equation_filtered = AdvectionEquation(domain, f)
+    equation_filtered = AdvectionEquation(domain, filter)
 
     # Solve discretized problem
     # sol = solve(
     #     equation,
-    #     x -> u(x, 0.0),
+    #     ξ -> u(ξ, 0.0),
     #     (0.0, T),
-    #     n;
+    #     M,
+    #     N;
     #     method = "discretizefirst",
     #     subspacedim,
     # )
 
     # Solve filtered-then-discretized problem
-    sol_bar = solve(
-        equation_filtered,
-        x -> u(x, 0.0),
-        (0.0, T),
-        n;
-        method = "filterfirst",
-        subspacedim,
-    )
+    # sol_bar = solve(
+    #     equation_filtered,
+    #     ξ -> u(ξ, 0.0),
+    #     (0.0, T),
+    #     M,
+    #     N;
+    #     method = "filterfirst",
+    #     subspacedim,
+    # )
 
     # Solve discretized-then-filtered problem
     sol_allbar = solve(
         equation_filtered,
-        x -> u(x, 0.0),
+        ξ -> u(ξ, 0.0),
         (0.0, T),
-        n;
+        M,
+        N;
         method = "discretizefirst",
         reltol = 1e-8,
         abstol = 1e-10,
     )
 
-    W = filter_matrix(f, domain, n)
+    # Exact filtered solution
+    ū = apply_filter_int(ξ -> u_int(ξ, T), filter, domain)
 
     # Relative error
-    u_exact = u.(x, T)
-    ū_exact = ū.(x, T)
-    u_allbar_exact = W * u_exact
+    u_exact = u.(ξ, T)
+    ū_exact = ū.(x)
     # err[i] = norm(sol(T) - u_exact) / norm(u_exact)
-    err_bar[i] = norm(sol_bar(T) - ū_exact) / norm(ū_exact)
+    # err_bar[i] = norm(sol_bar(T) - ū_exact) / norm(ū_exact)
     err_allbar[i] = norm(sol_allbar(T) - ū_exact) / norm(ū_exact)
 end
 
@@ -112,16 +113,16 @@ p = plot(
     yaxis = :log10,
     minorgrid = true,
     # minorgridstyle = :dash,
-    size = (400, 300),
+    # size = (400, 300),
     legend = :topright,
 )
 # p = plot()
-# plot!(p, N, err, label = "Discretized")
-plot!(p, N, err_bar, label = "Filtered-then-discretized")
-plot!(p, N, err_allbar, label = "Discretized-then-filtered")
-plot!(p, N, 1000N .^ -2, label = "\$1000 / N^2\$")
-xlabel!(p, "N")
+# plot!(p, NN, err, label = "Discretized")
+plot!(p, NN, err_bar, label = "Filtered-then-discretized")
+plot!(p, NN, err_allbar, label = "Discretized-then-filtered")
+plot!(p, NN, 1000N .^ -2, label = "\$1000 / NN^2\$")
+xlabel!(p, "NN")
 # title!(p, "Advection equation")
 display(p)
 
-savefig(p, "output/advection/varwidth_convergence.tikz")
+# savefig(p, "output/advection/varwidth_convergence.tikz")

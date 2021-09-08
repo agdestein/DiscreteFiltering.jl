@@ -12,7 +12,7 @@ b = 1.0
 domain = ClosedIntervalDomain(a, b)
 
 # Time
-T = 1.0
+T = 1.00
 
 ## Symbolics
 @variables x t
@@ -51,21 +51,23 @@ g_b = eval(build_function(g_b, t))
 tols = (; abstol = 1e-9, reltol = 1e-8)
 
 # Number of mesh points
-N = floor.(Int, 10 .^ LinRange(2, 4, 5))
+NN = floor.(Int, 10 .^ LinRange(1, 4, 7))
 
 # Errors
-err = zeros(length(N))
-err_bar = zeros(length(N))
-err_adbc = zeros(length(N))
+err = zeros(length(NN))
+err_bar = zeros(length(NN))
+err_adbc = zeros(length(NN))
 
 ## Solve
-@time for (i, n) ∈ enumerate(N)
+@time for (i, N) ∈ enumerate(NN)
+    M = N
 
-    println("Solving for n = $n")
+    println("Solving for M = $M and N = $N")
 
     # Discretization
-    x = discretize(domain, n)
-    Δx = (b - a) / n
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
+    Δx = (b - a) / N
 
     # h(x) = Δx / 2
     # filter = TopHatFilter(h)
@@ -79,7 +81,7 @@ err_adbc = zeros(length(N))
     equation = DiffusionEquation(domain, IdentityFilter(), f, g_a, g_b)
     equation_filtered = DiffusionEquation(domain, filter, f, g_a, g_b)
 
-    u_use = x -> u(x, T)
+    u_use = ξ -> u(ξ, T)
 
     # Exact filtered solution
     ū = apply_filter(u_use, filter, domain)
@@ -90,35 +92,37 @@ err_adbc = zeros(length(N))
     # Solve discretized problem
     # sol = solve(
     #     equation,
-    #     x -> u(x, 0.0),
+    #     ξ -> u(ξ, 0.0),
     #     (0.0, T),
-    #     n;
+    #     M,
+    #     N;
     #     method = "discretizefirst",
     #     boundary_conditions = "derivative",
     #     tols...,
     # )
 
     # Solve discretized-then-filtered problem
-    sol_bar = solve(
-        equation_filtered,
-        x -> u(x, 0.0),
-        (0.0, T),
-        n;
-        method = "discretizefirst",
-        boundary_conditions = "derivative",
-        tols...,
-    )
+    # sol_bar = solve(
+    #     equation_filtered,
+    #     ξ -> u(ξ, 0.0),
+    #     (0.0, T),
+    #     M,
+    #     N;
+    #     method = "discretizefirst",
+    #     boundary_conditions = "derivative",
+    #     tols...,
+    # )
 
     # Solve filtered-then-discretized problem with ADBC
-    # ū_adbc = solve_adbc(equation_filtered, x -> u(x, 0.0), (0.0, T), n, T / 100_000)
+    ū_adbc = solve_adbc(equation_filtered, ξ -> u(ξ, 0.0), (0.0, T), M, T / 20_000_000)
 
     # Relative error
-    u_exact = u.(x, T)
+    u_exact = u.(ξ, T)
     ū_exact = ū.(x)
     ū_ext_exact = ū_ext.(x)
     # err[i] = norm(sol(T) - u_exact) / norm(u_ exact)
-    err_bar[i] = norm(sol_bar.u[end] - ū_exact) / norm(ū_exact)
-    # err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
+    # err_bar[i] = norm(sol_bar.u[end] - ū_exact) / norm(ū_exact)
+    err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
 end
 
 ## Set GR backend for fast plotting
@@ -128,10 +132,10 @@ gr()
 pgfplotsx()
 
 ## Plot exact solution
-x = LinRange(0, 1, 101)
+ξ = LinRange(a, b, 101)
 p = plot(xlabel = raw"$x$", size = (400, 300), legend = :topright)
 for t ∈ LinRange(0.0, T, 5)
-    plot!(p, x, u.(x, t), label = "\$t = $t\$")
+    plot!(p, ξ, u.(ξ, t), label = "\$t = $t\$")
 end
 display(p)
 # savefig(p, "output/solution.tikz")
@@ -140,18 +144,21 @@ display(p)
 p = plot(
     xaxis = :log10,
     yaxis = :log10,
-    size = (400, 300),
+    # size = (400, 300),
     minorgrid = true,
     legend = :topright,
+    # xlims = (NN[1], NN[end]),
+    ylims = (1e-7, 1e0),
+    xticks = 10 .^ (1:4)
 )
-# plot!(p, N, err, label = "Discretized")
-plot!(p, N, err_bar, label = "Discretized-then-filtered")
-plot!(p, N, err_adbc, label = "Filtered-then-discretized with ADBC")
-plot!(p, N, 40 ./ N .^ 2, label = "\$40 / N^2\$")
-# plot!(p, N, 20 ./ N .^ 2, linestyle = :dash, label = raw"$20 n^{-2}$")
-# plot!(p, N, 10 ./ N .^ 1.5, linestyle = :dash, label = raw"$10 n^{-3/2}}$")
-xlabel!(p, raw"$N$")
+# plot!(p, NN, err, label = "Discretized")
+plot!(p, NN, err_adbc, marker = :c, label = "Filtered-then-discretized with ADBC")
+plot!(p, NN, err_bar, marker = :d, label = "Discretized-then-filtered")
+plot!(p, NN, 10 ./ NN .^ 2, linestyle = :dash, label = "\$10 / NN^2\$")
+# plot!(p, NN, 20 ./ NN .^ 2, linestyle = :dash, label = raw"$20 N^{-2}$")
+# plot!(p, NN, 10 ./ NN .^ 1.5, linestyle = :dash, label = raw"$10 N^{-3/2}}$")
+xlabel!(p, raw"$NN$")
 # title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
 display(p)
 
-# savefig(p, "output/convergence_adbc.tikz")
+# savefig(p, "output/diffusion/convergence.tikz")

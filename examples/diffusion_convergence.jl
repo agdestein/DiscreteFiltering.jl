@@ -149,7 +149,7 @@ p = plot(
     legend = :topright,
     # xlims = (NN[1], NN[end]),
     ylims = (1e-7, 1e0),
-    xticks = 10 .^ (1:4)
+    xticks = 10 .^ (1:4),
 )
 # plot!(p, NN, err, label = "Discretized")
 plot!(p, NN, err_adbc, marker = :c, label = "Filtered-then-discretized with ADBC")

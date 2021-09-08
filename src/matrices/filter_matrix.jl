@@ -6,7 +6,7 @@ Assemble discrete filtering matrix from a continuous filter `f`.
 function filter_matrix end
 
 
-function filter_matrix(::IdentityFilter, ::AbstractIntervalDomain, M, N)
+function filter_matrix(::IdentityFilter, domain::AbstractIntervalDomain, M, N)
     x = discretize(domain, M)
     ξ = discretize(domain, N)
     interpolation_matrix(x, ξ)

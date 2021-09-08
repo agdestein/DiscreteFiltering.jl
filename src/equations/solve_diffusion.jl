@@ -54,7 +54,7 @@ function solve(
     end
 
     if boundary_conditions == "exact"
-        M = [
+        Mass = [
             spzeros(1, N + 1)
             spzeros(N - 1, 1) sparse(I, N - 1, N - 1) spzeros(N - 1, 1)
             spzeros(1, N + 1)
@@ -67,7 +67,7 @@ function solve(
         γ_a = g_a
         γ_b = g_b
     elseif boundary_conditions == "derivative"
-        M = sparse(I, N + 1, N + 1)
+        Mass = sparse(I, N + 1, N + 1)
         # Zero out boundary u
         J = D
         J[[1, end], :] .= 0
@@ -82,7 +82,7 @@ function solve(
         error("Not implemented")
     elseif method == "discretizefirst"
         # Solve discretized-then-filtered problem
-        p = (; Ju = zeros(M), J = W * J * R, fₕ = zeros(N), Wf = zeros(M))
+        p = (; Ju = zero(x), J = W * J * R, fₕ = zero(ξ), Wf = zero(x))
         function Mdu!(du, u, p, t)
             # @show t
             @unpack Ju, J, fₕ, Wf = p
@@ -95,7 +95,7 @@ function solve(
             Mdu!,
             jac = (J, u, p, t) -> (J .= p.J),
             jac_prototype = p.J,
-            mass_matrix = W * M * R,
+            mass_matrix = W * Mass * R,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
         solution = OrdinaryDiffEq.solve(problem, solver; abstol, reltol)

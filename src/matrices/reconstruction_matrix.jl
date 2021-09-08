@@ -5,7 +5,7 @@ Approximate inverse of discrete filtering matrix, given filter `filter`.
 """
 function reconstruction_matrix end
 
-function reconstruction_matrix(::IdentityFilter, ::AbstractIntervalDomain, M, N)
+function reconstruction_matrix(::IdentityFilter, domain::AbstractIntervalDomain, M, N)
     x = discretize(domain, M)
     ξ = discretize(domain, N)
     interpolation_matrix(ξ, x)

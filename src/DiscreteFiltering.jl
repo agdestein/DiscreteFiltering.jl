@@ -35,6 +35,9 @@ include("equations/equations.jl")
 include("equations/solve.jl")
 include("equations/solve_adbc.jl")
 
+# Utils
+include("utils/ridge.jl")
+
 # Domain
 export ClosedIntervalDomain, PeriodicIntervalDomain, discretize
 

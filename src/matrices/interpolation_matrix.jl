@@ -8,7 +8,7 @@ function interpolation_matrix(x, ξ)
     ξᵀ = ξ'
     n = ξᵀ[[1], 1:end-1] .≤ x .< ξᵀ[[1], 2:end]
     for m = 1:length(x)-1
-        nₘ = find(n[m, :])
+        nₘ = findfirst(n[m, :])
         A[m, nₘ] = (ξᵀ[nₘ+1] - x[m]) / (ξᵀ[nₘ+1] - ξᵀ[nₘ])
         A[m, nₘ+1] = (x[m] - ξᵀ[nₘ]) / (ξᵀ[nₘ+1] - ξᵀ[nₘ])
     end

@@ -13,7 +13,7 @@ function filter_matrix(::IdentityFilter, ::AbstractIntervalDomain, M, N)
 end
 
 function filter_matrix(
-    f::TophatFilter,
+    f::TopHatFilter,
     domain::ClosedIntervalDomain,
     M,
     N,

@@ -5,8 +5,11 @@ Approximate inverse of discrete filtering matrix, given filter `filter`.
 """
 function reconstruction_matrix end
 
-reconstruction_matrix(::IdentityFilter, ::ClosedIntervalDomain, N) = sparse(I, N + 1, N + 1)
-reconstruction_matrix(::IdentityFilter, ::PeriodicIntervalDomain, N) = sparse(I, N, N)
+function reconstruction_matrix(::IdentityFilter, ::AbstractIntervalDomain, M, N) 
+    x = discretize(domain, M)
+    ξ = discretize(domain, N)
+    interpolation_matrix(ξ, x)
+end
 
 function reconstruction_matrix(
     filter::TopHatFilter,

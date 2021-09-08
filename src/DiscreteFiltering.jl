@@ -20,6 +20,7 @@ include("structures/filter.jl")
 # Matrix assembly
 include("matrices/advection_matrix.jl")
 include("matrices/diffusion_matrix.jl")
+include("matrices/interpolation_matrix.jl")
 include("matrices/filter_matrix.jl")
 include("matrices/filter_matrix_meshwidth.jl")
 include("matrices/reconstruction_matrix.jl")

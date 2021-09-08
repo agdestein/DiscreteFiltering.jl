@@ -5,9 +5,9 @@
     @test domain.left == a
     @test domain.right == b
 
-    n = 10
-    x = discretize(domain, n)
-    @test length(x) == n + 1
+    N = 10
+    x = discretize(domain, N)
+    @test length(x) == N + 1
     @test minimum(x) == a
     @test maximum(x) == b
 
@@ -17,10 +17,10 @@
     @test domain.left == a
     @test domain.right == b
 
-    n = 15
-    x = discretize(domain, n)
-    @test length(x) == n
-    @test minimum(x) == a + (b - a) / n
+    N = 15
+    x = discretize(domain, N)
+    @test length(x) == N
+    @test minimum(x) == a + (b - a) / N
     @test maximum(x) == b
 
     # Concrete unknown domain type

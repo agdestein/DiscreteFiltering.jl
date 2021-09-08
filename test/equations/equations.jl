@@ -21,7 +21,7 @@
     @test eq isa AdvectionEquation{PeriodicIntervalDomain{typeof(a)},IdentityFilter}
 
     # DiffusionEquation
-    f = (x, t) -> x + t
+    f = (ξ, t) -> ξ + t
     g_a = t -> t
     g_b = t -> 0.0
     eq = DiffusionEquation(closed, identity_filter, f, g_a, g_b)

@@ -12,10 +12,14 @@ using SparseArrays
 using NonNegLeastSquares
 
 # Domain
-include("structures/domain.jl")
+include("domain/domain.jl")
+include("domain/discretize.jl")
 
 # Filter
-include("structures/filter.jl")
+include("filter/filter.jl")
+include("filter/apply_filter.jl")
+include("filter/apply_filter_int.jl")
+include("filter/apply_filter_extend.jl")
 
 # Matrix assembly
 include("matrices/advection_matrix.jl")

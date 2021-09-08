@@ -35,17 +35,3 @@ struct PeriodicIntervalDomain{T} <: AbstractIntervalDomain
     right::T
 end
 PeriodicIntervalDomain(a, b) = PeriodicIntervalDomain(promote(a, b)...)
-
-
-"""
-    discretize(domain, n)
-
-Discretize domain with `n` points.
-"""
-function discretize end
-
-discretize(domain::ClosedIntervalDomain, n) = LinRange(domain.left, domain.right, n + 1)
-
-function discretize(domain::PeriodicIntervalDomain, n)
-    LinRange(domain.left + (domain.right - domain.left) / n, domain.right, n)
-end

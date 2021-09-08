@@ -33,9 +33,10 @@ function reconstruction_matrix(
 
         # Find m such that ξₙ is reachable from xₘ
         m = dists .< h.(x)
+        Mₙ = sum(m)
 
         # Polynomial degree (Taylor series order)
-        Q = min(degmax, max(1, floor(Int, √sum(m))))
+        Q = min(degmax + 1, max(1, Mₙ == 2 ? 2 : 3 ≤ Mₙ < 9 ? 3 : floor(Int, √Mₙ)))
 
         # Vandermonde matrix
         d = 1:Q
@@ -89,9 +90,10 @@ end
 #
 #         # Find m such that ξₙ is reachable from xₘ
 #         m = dists[mininds][:] .< h.(x)
+#         Mₙ = sum(m)
 #
 #         # Polynomial degree (Taylor series order)
-#         Q = min(degmax, max(1, floor(Int, √sum(m))))
+#         Q = min(degmax + 1, max(1, Mₙ == 2 ? 2 : 3 ≤ Mₙ < 9 ? 3 : floor(Int, √Mₙ)))
 #
 #         # Vandermonde matrix
 #         d = 1:Q
@@ -153,8 +155,8 @@ function reconstruction_matrix(
 
         # Polynomial degree (Taylor series order)
         Mₙ = length(xₘ)
-        Q = min(degmax, Mₙ - 1)
-        # Q = min(degmax, max(1, floor(Int, √Mₙ)))
+        Q = min(degmax + 1, Mₙ)
+        # Q = min(degmax + 1, max(1, Mₙ == 2 ? 2 : 3 ≤ Mₙ < 9 ? 3 : floor(Int, √Mₙ)))
 
         # Vandermonde matrix
         # aₘ = max.(xₘ - hₘ, domain.left - 0.001L)
@@ -163,13 +165,13 @@ function reconstruction_matrix(
         ivals = xₘ .± hₘ
         # ivals = Interval.(aₘ, bₘ)
 
-        ϕ = chebyshevt.(0:Q, [minimum(xₘ - 3hₘ)..maximum(xₘ + 3hₘ)])
-        # ϕ = chebyshevt.(0:Q, [domain.left..domain.right])
+        ϕ = chebyshevt.(0:Q-1, [minimum(xₘ - 3hₘ)..maximum(xₘ + 3hₘ)])
+        # ϕ = chebyshevt.(0:Q-1, [domain.left..domain.right])
         ϕ_int = integrate.(ϕ)
 
-        Zₙ = spzeros(Q + 1, Mₙ)
-        vₙ = zeros(Q + 1)
-        for q = 1:Q+1
+        Zₙ = spzeros(Q, Mₙ)
+        vₙ = zeros(Q)
+        for q = 1:Q
             for (i, ival) ∈ enumerate(ivals)
                 Zₙ[q, i] =
                     (ϕ_int[q](ival.right) - ϕ_int[q](ival.left)) / (ival.right - ival.left)
@@ -216,7 +218,8 @@ function reconstruction_matrix(
 
         # Polynomial degree (Taylor series order)
         Mₙ = sum(m)
-        Q = sum(m) - 1
+        Q = min(degmax + 1, Mₙ)
+        # Q = min(degmax + 1, max(1, Mₙ == 2 ? 2 : 3 ≤ Mₙ < 9 ? 3 : floor(Int, √Mₙ)))
 
         xₘ = x[m]
         hₘ = h.(xₘ)
@@ -226,15 +229,15 @@ function reconstruction_matrix(
         # ivals = xₘ .± hₘ
         ivals = Interval.(aₘ, bₘ)
 
-        # ϕ = chebyshevt.(0:Q, [minimum(xₘ - hₘ)..maximum(xₘ + hₘ)])
-        ϕ = chebyshevt.(0:Q, [minimum(aₘ)..maximum(bₘ)])
-        # ϕ = chebyshevt.(0:Q, [Ival_domain])
+        # ϕ = chebyshevt.(0:Q-1, [minimum(xₘ - hₘ)..maximum(xₘ + hₘ)])
+        ϕ = chebyshevt.(0:Q-1, [minimum(aₘ)..maximum(bₘ)])
+        # ϕ = chebyshevt.(0:Q-1, [Ival_domain])
 
         # Polynomials evaluated at ξₙ
         vₙ = [ϕ(ξₙ) for ϕ ∈ ϕ]
 
         # Moment matrix
-        Zₙ = spzeros(Q + 1, Mₙ)
+        Zₙ = spzeros(Q, Mₙ)
         for mm = 1:Mₙ
             ival = ivals[mm]
             ϕₘₘ = Fun.(ϕ, [ival])
@@ -289,9 +292,10 @@ function reconstruction_matrix(
         hₘ = h.(xₘ)
 
         # Polynomial degree (Taylor series order)
-        Q = sum(m) - 1
         Mₙ = sum(m)
-        # Q = min(degmax, max(1, floor(Int, √Mₙ)))
+        Q = min(degmax + 1, Mₙ)
+        # Q = min(degmax + 1, max(1, Mₙ == 2 ? 2 : 3 ≤ Mₙ < 9 ? 3 : floor(Int, √Mₙ)))
+
 
         # Vandermonde matrix
         aₘ = max.(xₘ - hₘ, domain.left - Δx / 1000)
@@ -300,14 +304,14 @@ function reconstruction_matrix(
         ivals = xₘ .± hₘ
         # ivals = Interval.(aₘ, bₘ)
 
-        ϕ = chebyshevt.(0:Q, [minimum(xₘ - hₘ)..maximum(xₘ + hₘ)])
-        # ϕ = chebyshevt.(0:Q, [domain.left..domain.right])
+        ϕ = chebyshevt.(0:Q-1, [minimum(xₘ - hₘ)..maximum(xₘ + hₘ)])
+        # ϕ = chebyshevt.(0:Q-1, [domain.left..domain.right])
 
         # Polynomials evaluated at ξₙ
         vₙ = [ϕ(ξₙ) for ϕ ∈ ϕ]
 
         # Polynomial moments
-        Zₙ = spzeros(Q + 1, Mₙ)
+        Zₙ = spzeros(Q, Mₙ)
         for mm = 1:Mₙ
             ival = ivals[mm]
             ϕₘₘ = Fun.(ϕ, [ival])

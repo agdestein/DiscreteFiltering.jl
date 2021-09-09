@@ -49,7 +49,7 @@ t = T
 
 # ODE solver tolerances
 tols = (; abstol = 1e-6, reltol = 1e-4)
-
+λ = 1e-4
 
 ## Plot filter
 plot(ξ, h)
@@ -92,6 +92,7 @@ sol = solve(
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
+    λ,
 )
 plot(x, uₕ, label = "Initial conditions")
 plot!(x, sol(t), label = "Discretized")
@@ -116,6 +117,7 @@ sol_allbar = solve(
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
+    λ,
 )
 
 plot(ξ, uₕ, label = "Initial")

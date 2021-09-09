@@ -49,6 +49,7 @@ g_b = eval(build_function(g_b, t))
 # tols = (;)
 # tols = (; abstol = 1e-6, reltol = 1e-4)
 tols = (; abstol = 1e-9, reltol = 1e-8)
+λ = 1e-4
 
 # Number of mesh points
 NN = floor.(Int, 10 .^ LinRange(1, 4, 7))
@@ -99,19 +100,21 @@ err_adbc = zeros(length(NN))
     #     method = "discretizefirst",
     #     boundary_conditions = "derivative",
     #     tols...,
+    #     λ,
     # )
 
     # Solve discretized-then-filtered problem
-    # sol_bar = solve(
-    #     equation_filtered,
-    #     ξ -> u(ξ, 0.0),
-    #     (0.0, T),
-    #     M,
-    #     N;
-    #     method = "discretizefirst",
-    #     boundary_conditions = "derivative",
-    #     tols...,
-    # )
+    sol_bar = solve(
+        equation_filtered,
+        ξ -> u(ξ, 0.0),
+        (0.0, T),
+        M,
+        N;
+        method = "discretizefirst",
+        boundary_conditions = "derivative",
+        tols...,
+        λ
+    )
 
     # Solve filtered-then-discretized problem with ADBC
     ū_adbc = solve_adbc(equation_filtered, ξ -> u(ξ, 0.0), (0.0, T), M, T / 20_000_000)
@@ -154,10 +157,10 @@ p = plot(
 # plot!(p, NN, err, label = "Discretized")
 plot!(p, NN, err_adbc, marker = :c, label = "Filtered-then-discretized with ADBC")
 plot!(p, NN, err_bar, marker = :d, label = "Discretized-then-filtered")
-plot!(p, NN, 10 ./ NN .^ 2, linestyle = :dash, label = "\$10 / NN^2\$")
+plot!(p, NN, 10 ./ NN .^ 2, linestyle = :dash, label = "\$10 / N^2\$")
 # plot!(p, NN, 20 ./ NN .^ 2, linestyle = :dash, label = raw"$20 N^{-2}$")
 # plot!(p, NN, 10 ./ NN .^ 1.5, linestyle = :dash, label = raw"$10 N^{-3/2}}$")
-xlabel!(p, raw"$NN$")
+xlabel!(p, raw"$N$")
 # title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
 display(p)
 

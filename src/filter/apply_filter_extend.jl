@@ -19,8 +19,6 @@ function apply_filter_extend(u_int, filter::TopHatFilter, domain::ClosedInterval
             g_b(t) * max(0.0, xᵣ - b)
         )
     end
-
-    ū_ext
 end
 
 
@@ -53,6 +51,4 @@ function apply_filter_extend(u, filter::ConvolutionalFilter, domain::ClosedInter
 
         S
     end
-
-    ū_ext
 end

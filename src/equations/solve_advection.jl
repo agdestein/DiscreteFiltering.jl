@@ -28,6 +28,7 @@ function solve(
     solver = QNDF(),
     reltol = 1e-4,
     abstol = 1e-6,
+    λ = 1e-6,
 ) where {T,F}
     @unpack domain, filter = equation
 
@@ -37,8 +38,8 @@ function solve(
     # Get matrices
     C = advection_matrix(domain, N)
     D = diffusion_matrix(domain, N)
-    W = filter_matrix(filter, domain, M, N)
-    R = reconstruction_matrix(filter, domain, M, N)
+    W = filter_matrix(filter, domain, M, N; λ)
+    R = reconstruction_matrix(filter, domain, M, N; λ)
 
     ū = apply_filter(u, filter, domain)
 

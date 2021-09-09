@@ -23,6 +23,7 @@ u_int(x, t) = -cos(x - t) + 3 / 25 * sin(5(x - t)) - 1 / 25 / 20 * cos(20(x - 1 
 # tols = (; abstol = 1e-6, reltol = 1e-4)
 # tols = (; abstol = 1e-7, reltol = 1e-5)
 subspacedim = 500
+λ = 1e-4
 
 # Number of mesh points
 NN = floor.(Int, 10 .^ LinRange(2, 4, 20))
@@ -64,6 +65,7 @@ err_allbar = zeros(length(NN))
     #     N;
     #     method = "discretizefirst",
     #     subspacedim,
+    #     λ,
     # )
 
     # Solve filtered-then-discretized problem
@@ -75,6 +77,7 @@ err_allbar = zeros(length(NN))
     #     N;
     #     method = "filterfirst",
     #     subspacedim,
+    #     λ,
     # )
 
     # Solve discretized-then-filtered problem
@@ -87,6 +90,7 @@ err_allbar = zeros(length(NN))
         method = "discretizefirst",
         reltol = 1e-8,
         abstol = 1e-10,
+        λ,
     )
 
     # Exact filtered solution

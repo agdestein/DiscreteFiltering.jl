@@ -46,6 +46,7 @@ uₓ = eval(build_function(uₓ, x, t))
 # tols = (;)
 # tols = (; abstol = 1e-6, reltol = 1e-4)
 tols = (; abstol = 1e-9, reltol = 1e-8)
+λ = 1e-4
 
 N = 20
 M = N
@@ -94,6 +95,7 @@ sol = solve(
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
+    λ,
 )
 
 # Solve discretized-then-filtered problem
@@ -106,6 +108,7 @@ sol_bar = solve(
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
+    λ,
 )
 
 # Solve filtered-then-discretized problem with ADBC

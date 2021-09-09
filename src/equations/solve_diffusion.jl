@@ -27,6 +27,7 @@ function solve(
     solver = QNDF(),
     abstol = 1e-4,
     reltol = 1e-3,
+    λ = 1e-6,
 ) where {T,F}
 
     @unpack domain, filter, f, g_a, g_b = equation
@@ -35,8 +36,8 @@ function solve(
 
     # Get matrices
     D = diffusion_matrix(domain, N)
-    W = filter_matrix(filter, domain, M, N)
-    R = reconstruction_matrix(filter, domain, M, N)
+    W = filter_matrix(filter, domain, M, N; λ)
+    R = reconstruction_matrix(filter, domain, M, N; λ)
 
     W₀ = W[:, 1]
     Wₙ = W[:, end]
@@ -133,6 +134,7 @@ function solve(
     solver = QNDF(),
     abstol = 1e-4,
     reltol = 1e-3,
+    λ,
 ) where {T,F}
 
     @unpack domain, filter = equation
@@ -143,8 +145,8 @@ function solve(
 
     # Get matrices
     D = diffusion_matrix(domain, N)
-    W = filter_matrix(filter, domain, M, N)
-    R = reconstruction_matrix(filter, domain, M, N)
+    W = filter_matrix(filter, domain, M, N; λ)
+    R = reconstruction_matrix(filter, domain, M, N; λ)
     A = spdiagm(α.(ξ))
 
     # Initial conditions

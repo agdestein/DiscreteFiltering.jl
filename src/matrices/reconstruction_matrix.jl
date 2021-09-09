@@ -15,7 +15,7 @@ function reconstruction_matrix(
     filter::TopHatFilter,
     domain::ClosedIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )
@@ -68,7 +68,7 @@ end
 #     filter::TopHatFilter,
 #     domain::PeriodicIntervalDomain,
 #     M,
-#     N,
+#     N;
 #     degmax = 10,
 #     λ = 0,
 # )
@@ -123,7 +123,7 @@ function reconstruction_matrix(
     filter::TopHatFilter,
     domain::PeriodicIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )
@@ -195,7 +195,7 @@ function reconstruction_matrix(
     filter::ConvolutionalFilter,
     domain::ClosedIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )
@@ -260,7 +260,7 @@ function reconstruction_matrix(
     filter::ConvolutionalFilter,
     domain::PeriodicIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )

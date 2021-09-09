@@ -16,7 +16,7 @@ function filter_matrix(
     f::TopHatFilter,
     domain::ClosedIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )
@@ -72,7 +72,7 @@ function filter_matrix(
     f::TopHatFilter,
     domain::PeriodicIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )
@@ -136,7 +136,7 @@ function filter_matrix(
     f::ConvolutionalFilter,
     domain::ClosedIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )
@@ -193,7 +193,7 @@ function filter_matrix(
     f::ConvolutionalFilter,
     domain::PeriodicIntervalDomain,
     M,
-    N,
+    N;
     degmax = 10,
     λ = 0,
 )

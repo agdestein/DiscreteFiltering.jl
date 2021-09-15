@@ -3,17 +3,15 @@ Abstract equation.
 """
 abstract type Equation end
 
-
 """
     AdvectionEquation(domain, filter = IdentityFilter())
 
 Filtered advection equation.
 """
-@with_kw struct AdvectionEquation{D<:Domain,F<:Filter} <: Equation
+Base.@kwdef struct AdvectionEquation{D<:Domain,F<:Filter} <: Equation
     domain::D
     filter::F = IdentityFilter()
 end
-
 
 """
     DiffusionEquation(
@@ -26,7 +24,7 @@ end
 
 Filtered diffusion equation.
 """
-@with_kw struct DiffusionEquation{D<:Domain,F<:Filter} <: Equation
+Base.@kwdef struct DiffusionEquation{D<:Domain,F<:Filter} <: Equation
     domain::D
     filter::F = IdentityFilter()
     f::Union{Nothing,Function} = nothing
@@ -34,13 +32,12 @@ Filtered diffusion equation.
     g_b::Union{Nothing,Function} = nothing
 end
 
-
 """
     BurgersEquation(domain, filter = IdentityFilter())
 
 Filtered Burgers equation.
 """
-@with_kw struct BurgersEquation{D<:Domain,F<:Filter} <: Equation
+Base.@kwdef struct BurgersEquation{D<:Domain,F<:Filter} <: Equation
     domain::D
     filter::F = IdentityFilter()
 end

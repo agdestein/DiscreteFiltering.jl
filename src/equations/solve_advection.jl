@@ -28,51 +28,55 @@ function solve(
     solver = QNDF(),
     reltol = 1e-4,
     abstol = 1e-6,
+    degmax = 10,
     λ = 1e-6,
 ) where {T,F}
     @unpack domain, filter = equation
 
     x = discretize(domain, M)
     ξ = discretize(domain, N)
-
-    # Get matrices
-    C = advection_matrix(domain, N)
-    D = diffusion_matrix(domain, N)
-    W = filter_matrix(filter, domain, M, N; λ)
-    R = reconstruction_matrix(filter, domain, M, N; λ)
-
+    
     ū = apply_filter(u, filter, domain)
 
-    ūₕ = ū.(x)
-    # ūₕ = W * u.(ξ)
-
     if method == "filterfirst"
+        # Get matrices
+        C = advection_matrix(domain, N)
+        D = diffusion_matrix(domain, N)
         F === TopHatFilter ||
             error("Method \"filterfirst\" is only implemented for TopHatFilter")
-        M == N || error("Method \"filterfirst\" is only implemented for M == N")
+        # M == N || @warn "Method \"filterfirst\" will only use M"
         h = filter.width
-        dh(ξ) = ForwardDiff.derivative(h, ξ)
-        α(ξ) = 1 / 3 * dh(ξ) * h(ξ)
+        dh(x) = derivative(h, x)
+        α(x) = 1 / 3 * dh(x) * h(x)
         A = spdiagm(α.(ξ))
         J = DiffEqArrayOperator(-C + A * D)
+        ūₕ = ū.(ξ)
         problem = ODEProblem(J, ūₕ, tlist)
         solution = OrdinaryDiffEq.solve(
             problem,
             LinearExponential(krylov = :simple, m = subspacedim),
         )
     elseif method == "discretizefirst"
+        # Get matrices
+        C = advection_matrix(domain, N)
+        D = diffusion_matrix(domain, N)
+        W = filter_matrix(filter, domain, M, N; degmax, λ)
+        R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
+        ūₕ = ū.(x)
+        # ūₕ = W * u.(ξ)
         p = (; J = -W * C * R)
         Mdu!(du, u, p, t) = mul!(du, p.J, u)
         odefunction = ODEFunction(
             Mdu!,
             jac = (J, u, p, t) -> (J .= p.J),
             jac_prototype = p.J,
-            mass_matrix = W * R,
+            # mass_matrix = W * R,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
         solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
     else
         error("Unknown method")
     end
+
     solution
 end

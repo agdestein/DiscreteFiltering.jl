@@ -5,8 +5,7 @@ Assemble discrete filtering matrix from a continuous filter `f`.
 """
 function filter_matrix end
 
-
-function filter_matrix(::IdentityFilter, domain::AbstractIntervalDomain, M, N)
+function filter_matrix(::IdentityFilter, domain::AbstractIntervalDomain, M, N; kwargs...)
     x = discretize(domain, M)
     ξ = discretize(domain, N)
     interpolation_matrix(x, ξ)
@@ -26,8 +25,8 @@ function filter_matrix(
     ival_domain = (domain.left - Δx / 1000)..(domain.right + Δx / 1000)
     h = f.width
     W = spzeros(M + 1, N + 1)
-    for m = 1:(M+1)
-        # Point
+    for m = 1:M+1
+        # Filtering point
         xₘ = x[m]
 
         # Filter width at point
@@ -38,20 +37,20 @@ function filter_matrix(
         ival_double = (xₘ ± 2hₘ) ∩ ival_domain
         n = ξ .∈ [ival_double]
         Nₘ = sum(n)
-        P = min(degmax + 1, max(1, Nₘ == 2 ? 2 : 3 ≤ Nₘ < 9 ? 3 : floor(Int, √Nₘ)))
 
+        # Polynomial basis
+        P = min(degmax + 1, max(1, Nₘ == 2 ? 2 : 3 ≤ Nₘ < 9 ? 3 : floor(Int, √Nₘ)))
         ϕ = chebyshevt(0:P-1, ival_double)
         ϕ_int = integrate.(ϕ)
 
-        # Polynomials evaluated at integration points
+        # Assemble vandermonde matrix and moment vector
         Vₘ = spzeros(P, Nₘ)
-
-        # Polynomial moments around point
         μₘ = zeros(P)
-
-        # Fill in
         for p = 1:P
+            # Polynomials evaluated at integration points
             Vₘ[p, :] = ϕ[p].(ξ[n])
+
+            # Polynomial moments around point
             μₘ[p] = (ϕ_int[p](ival.right) - ϕ_int[p](ival.left)) / (ival.right - ival.left)
         end
 
@@ -60,7 +59,7 @@ function filter_matrix(
         # wₘ = Vₘ \ μₘ
         wₘ = nonneg_lsq(Vₘ, μₘ)
 
-        # Store weights
+        # Store row of weights
         W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)
@@ -81,10 +80,9 @@ function filter_matrix(
     Δx = x[2] - x[1]
     L = (domain.right - domain.left)
     h = f.width
-
     W = spzeros(M, N)
     for m = 1:M
-        # Point
+        # Filtering point
         xₘ = x[m]
 
         # Filter width at point
@@ -100,22 +98,20 @@ function filter_matrix(
         ξₙ = (ξ.+(xₘ.-ξ.>L/2)L.-(ξ.-xₘ.>L/2)L)[n]
         Nₘ = length(ξₙ)
 
+        # Polynomial basis
         P = min(degmax + 1, Nₘ)
         # P = min(degmax + 1, max(1, Nₘ == 2 ? 2 : 3 ≤ Nₘ < 9 ? 3 : floor(Int, √Nₘ)))
-
         # ϕ = chebyshevt(0:P-1, ival)
         ϕ = chebyshevt(0:P-1, xₘ ± 3hₘ)
         ϕ_int = integrate.(ϕ)
 
-        # Polynomials evaluated at integration points
+        # Assemble vandermonde matrix and moment vector
         Vₘ = spzeros(P, Nₘ)
-
-        # Polynomial moments around point
         zₘ = zeros(P)
-
-        # Fill in
         for p = 1:P
+        # Polynomials evaluated at integration points
             Vₘ[p, :] = ϕ[p].(ξₙ)
+        # Polynomial moments around point
             zₘ[p] = (ϕ_int[p](ival.right) - ϕ_int[p](ival.left)) / 2hₘ
         end
 
@@ -124,7 +120,7 @@ function filter_matrix(
         # wₘ = Vₘ \ zₘ
         # wₘ = nonneg_lsq(Vₘ, zₘ)
 
-        # Store weights
+        # Store row of weights
         W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)
@@ -148,7 +144,7 @@ function filter_matrix(
     G = f.kernel
     W = spzeros(M + 1, N + 1)
     for m = 1:(M+1)
-        # Point
+        # Filtering point
         xₘ = x[m]
 
         # Filter width at point
@@ -160,6 +156,7 @@ function filter_matrix(
         ξₙ = ξ[n]
         Nₘ = length(ξₙ)
 
+        # Polynomial basis
         P = min(degmax + 1, Nₘ)
         ϕ = chebyshevt(0:P-1, ival)
 
@@ -181,7 +178,7 @@ function filter_matrix(
         # wₘ = Vₘ \ zₘ
         # wₘ = nonneg_lsq(Vₘ, zₘ)
 
-        # Store weights
+        # Store row of weights
         W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)
@@ -204,7 +201,7 @@ function filter_matrix(
     G = f.kernel
     W = spzeros(M, N)
     for m = 1:M
-        # Point
+        # Filtering point
         xₘ = x[m]
 
         # Filter width at point
@@ -219,24 +216,23 @@ function filter_matrix(
         ξₙ = (ξ+L*n_left-L*n_right)[n]
         Nₘ = length(ξₙ)
 
+        # Polynomial basis
         P = min(degmax + 1, Nₘ)
         # P = min(degmax + 1, max(1, floor(Int, √Nₘ)))
-
         ϕ = chebyshevt(0:P-1, ival)
 
         # Normalized kernel Fun
         kern = Fun(ξ -> G(ξ - xₘ), ival)
         kern /= sum(kern)
 
-        # Polynomials evaluated at integration points
+        # Assemble vandermonde matrix and moment vector
         Vₘ = spzeros(P, Nₘ)
-
-        # Polynomial moments around point
         zₘ = zeros(P)
-
         # Fill in
         for p = 1:P
+        # Polynomials evaluated at integration points
             Vₘ[p, :] = ϕ[p].(ξₙ)
+        # Polynomial moments around point
             zₘ[p] = sum(kern * ϕ[p])
         end
 
@@ -245,7 +241,7 @@ function filter_matrix(
         # wₘ = Vₘ \ zₘ
         # wₘ = nonneg_lsq(Vₘ, zₘ)
 
-        # Store weights
+        # Store row of weights
         W[m, n] .= wₘ[:] ./ sum(wₘ)
     end
     dropzeros!(W)

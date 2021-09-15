@@ -4,6 +4,9 @@ using Plots
 using Symbolics
 using Latexify
 
+## Plot theme
+theme(:juno)
+
 ## Parameters
 # Domain
 a = 0.0
@@ -49,26 +52,29 @@ g_b = eval(build_function(g_b, t))
 # tols = (;)
 # tols = (; abstol = 1e-6, reltol = 1e-4)
 tols = (; abstol = 1e-9, reltol = 1e-8)
-λ = 1e-4
+λ = 1e-9
 
 # Number of mesh points
-NN = floor.(Int, 10 .^ LinRange(1, 4, 7))
+nrefine = 5
+NN = floor.(Int, 10 .^ LinRange(2, 4, nrefine))
+MM = round.(Int, 9 // 10 .* NN)
 
 # Errors
-err = zeros(length(NN))
-err_bar = zeros(length(NN))
-err_adbc = zeros(length(NN))
+err = zeros(nrefine)
+err_bar = zeros(nrefine)
+err_adbc = zeros(nrefine)
 
 ## Solve
-@time for (i, N) ∈ enumerate(NN)
-    M = N
+@time for i = 1:nrefine
+    M = MM[i]
+    N = NN[i]
 
     println("Solving for M = $M and N = $N")
 
     # Discretization
     x = discretize(domain, M)
     ξ = discretize(domain, N)
-    Δx = (b - a) / N
+    Δx = (b - a) / M
 
     # h(x) = Δx / 2
     # filter = TopHatFilter(h)
@@ -113,20 +119,23 @@ err_adbc = zeros(length(NN))
         method = "discretizefirst",
         boundary_conditions = "derivative",
         tols...,
-        λ
+        λ,
     )
 
     # Solve filtered-then-discretized problem with ADBC
-    ū_adbc = solve_adbc(equation_filtered, ξ -> u(ξ, 0.0), (0.0, T), M, T / 20_000_000)
+    # ū_adbc = solve_adbc(equation_filtered, ξ -> u(ξ, 0.0), (0.0, T), M, T / 20_000_000)
 
     # Relative error
     u_exact = u.(ξ, T)
     ū_exact = ū.(x)
     ū_ext_exact = ū_ext.(x)
     # err[i] = norm(sol(T) - u_exact) / norm(u_ exact)
-    # err_bar[i] = norm(sol_bar.u[end] - ū_exact) / norm(ū_exact)
-    err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
+    err_bar[i] = norm(sol_bar.u[end] - ū_exact) / norm(ū_exact)
+    # err_adbc[i] = norm(ū_adbc - ū_ext_exact) / norm(ū_ext_exact)
 end
+
+##
+plot(x, [ū_exact, sol_bar.u[end]])
 
 ## Set GR backend for fast plotting
 gr()
@@ -136,9 +145,13 @@ pgfplotsx()
 
 ## Plot exact solution
 ξ = LinRange(a, b, 101)
-p = plot(xlabel = raw"$x$", size = (400, 300), legend = :topright)
+p = plot(
+    xlabel = raw"$x$",
+    # size = (400, 300),
+    legend = :topright,
+)
 for t ∈ LinRange(0.0, T, 5)
-    plot!(p, ξ, u.(ξ, t), label = "\$t = $t\$")
+    plot!(p, ξ, u.(ξ, t), label = "t = $t")
 end
 display(p)
 # savefig(p, "output/solution.tikz")
@@ -163,5 +176,4 @@ plot!(p, NN, 10 ./ NN .^ 2, linestyle = :dash, label = "\$10 / N^2\$")
 xlabel!(p, raw"$N$")
 # title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
 display(p)
-
 # savefig(p, "output/diffusion/convergence.tikz")

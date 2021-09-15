@@ -1,15 +1,15 @@
 "Discrete filtering toolbox"
 module DiscreteFiltering
 
-using ApproxFun: Fun, chebyshevt, integrate
-using ForwardDiff
-using IntervalSets
-using LinearAlgebra
-using OrdinaryDiffEq:
-    ODEFunction, ODEProblem, QNDF, OrdinaryDiffEq, DiffEqArrayOperator, LinearExponential
-using Parameters
-using SparseArrays
-using NonNegLeastSquares
+using ApproxFun: Fun, chebyshevt, integrate, Interval, (..)
+using ForwardDiff: derivative
+using IntervalSets: ±
+using LinearAlgebra: I, mul!
+using OrdinaryDiffEq: OrdinaryDiffEq
+using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, DiffEqArrayOperator, LinearExponential
+using Parameters: @unpack
+using SparseArrays: dropzeros!, sparse, spdiagm, spzeros
+using NonNegLeastSquares: nonneg_lsq
 
 # Domain
 include("domain/domain.jl")

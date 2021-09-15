@@ -73,8 +73,8 @@ function solve(
         J = D
         J[[1, end], :] .= 0
         dropzeros!(J)
-        γ_a = t -> ForwardDiff.derivative(g_a, t)
-        γ_b = t -> ForwardDiff.derivative(g_b, t)
+        γ_a = t -> derivative(g_a, t)
+        γ_b = t -> derivative(g_b, t)
     else
         error("Unknown boundary conditions")
     end

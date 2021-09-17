@@ -91,7 +91,7 @@ plot(x, uₕ, label = "Initial")
 plot!(x, ūₕ, label = "Initial filtered")
 plot!(x, sol_bar(t), label = "Filtered-then-discretized")
 plot!(x, ū.(x, t), label = "Filtered exact")
-#plot!(x, 500*α.(ξ))
+# plot!(x, 500*α.(ξ))
 
 
 ## Solve discretized-and-then-filtered problem
@@ -109,7 +109,11 @@ plot!(x, W * u.(ξ, t), label = "Exact")
 pgfplotsx()
 
 ## Comparison
-p = plot(size = (400, 300), xlabel = "\$x\$", legend = :topright)
+p = plot(
+    size = (400, 300),
+    xlabel = "\$x\$",
+    legend = :topright,
+)
 plot!(p, x, uₕ, label = "\$u(x, t = 0.0)\$")
 # plot!(p, x, ūₕ, label = "Initial filtered")
 # plot!(p, x, sol(t), label = "Discretized")
@@ -117,7 +121,7 @@ plot!(p, x, uₕ, label = "\$u(x, t = 0.0)\$")
 # plot!(p, x, sol_allbar(t), label = "Discretized-then-filtered")
 # plot!(p, x, [u.(x, t), ū.(x, t)], label = "Exact")
 plot!(p, x, u.(x, t), label = "\$u(x, t = $t)\$")
-plot!(p, x, ū.(x, t), label = "\$\\bar\{u\}, t = $t)\$")
+plot!(p, x, ū.(x, t), label = "\$u(x, t = $t)\$")
 # ylims!(p, minimum(uₕ), maximum(uₕ))
 display(p)
 savefig(p, "output/advection/solution.tikz")

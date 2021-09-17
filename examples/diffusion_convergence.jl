@@ -1,5 +1,5 @@
 using DiscreteFiltering
-using LinearAlgebra: norm
+using LinearAlgebra
 using Plots
 using Symbolics
 using Latexify
@@ -52,6 +52,7 @@ g_b = eval(build_function(g_b, t))
 # tols = (;)
 # tols = (; abstol = 1e-6, reltol = 1e-4)
 tols = (; abstol = 1e-9, reltol = 1e-8)
+degmax = 50
 λ = 1e-9
 
 # Number of mesh points
@@ -106,6 +107,7 @@ err_adbc = zeros(nrefine)
     #     method = "discretizefirst",
     #     boundary_conditions = "derivative",
     #     tols...,
+    #     degmax,
     #     λ,
     # )
 
@@ -119,6 +121,7 @@ err_adbc = zeros(nrefine)
         method = "discretizefirst",
         boundary_conditions = "derivative",
         tols...,
+        degmax,
         λ,
     )
 
@@ -154,7 +157,7 @@ for t ∈ LinRange(0.0, T, 5)
     plot!(p, ξ, u.(ξ, t), label = "t = $t")
 end
 display(p)
-# savefig(p, "output/solution.tikz")
+savefig(p, "output/diffusion/solution.tikz")
 
 ## Plot convergence
 p = plot(

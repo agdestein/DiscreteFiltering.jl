@@ -1,5 +1,5 @@
 using DiscreteFiltering
-using LinearAlgebra: norm
+using LinearAlgebra
 using Plots
 using Symbolics
 using Latexify
@@ -46,6 +46,7 @@ uₓ = eval(build_function(uₓ, x, t))
 # tols = (;)
 # tols = (; abstol = 1e-6, reltol = 1e-4)
 tols = (; abstol = 1e-9, reltol = 1e-8)
+degmax = 50
 λ = 1e-4
 
 N = 20
@@ -95,6 +96,7 @@ sol = solve(
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
+    degmax,
     λ,
 )
 
@@ -108,6 +110,7 @@ sol_bar = solve(
     method = "discretizefirst",
     boundary_conditions = "derivative",
     tols...,
+    degmax,
     λ,
 )
 

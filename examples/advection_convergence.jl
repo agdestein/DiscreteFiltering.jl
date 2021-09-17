@@ -1,5 +1,5 @@
 using DiscreteFiltering
-using LinearAlgebra: norm
+using LinearAlgebra
 using Plots
 using ProgressLogging
 

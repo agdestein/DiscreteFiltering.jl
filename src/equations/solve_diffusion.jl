@@ -10,6 +10,8 @@
         solver = QNDF(),
         abstol = 1e-4,
         reltol = 1e-3,
+        degmax = 10,
+        λ = 1e-6
     ) where {T,F}
 
 Solve `equation` from `tlist[1]` to `tlist[2]` with initial conditions `u` and a
@@ -27,6 +29,7 @@ function solve(
     solver = QNDF(),
     abstol = 1e-4,
     reltol = 1e-3,
+    degmax = 10,
     λ = 1e-6,
 ) where {T,F}
 
@@ -36,8 +39,8 @@ function solve(
 
     # Get matrices
     D = diffusion_matrix(domain, N)
-    W = filter_matrix(filter, domain, M, N; λ)
-    R = reconstruction_matrix(filter, domain, M, N; λ)
+    W = filter_matrix(filter, domain, M, N; degmax, λ)
+    R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
 
     W₀ = W[:, 1]
     Wₙ = W[:, end]
@@ -118,6 +121,8 @@ end
         solver = QNDF(),
         abstol = 1e-4,
         reltol = 1e-3,
+        degmax = 10,
+        λ = 1e-6
     ) where {T,F}
 
 Solve `equation` from `tlist[1]` to `tlist[2]` with initial conditions `u` and a
@@ -134,9 +139,9 @@ function solve(
     solver = QNDF(),
     abstol = 1e-4,
     reltol = 1e-3,
-    λ,
+    degmax = 10,
+    λ = 1e-6,
 ) where {T,F}
-
     @unpack domain, filter = equation
 
     # Domain
@@ -145,8 +150,8 @@ function solve(
 
     # Get matrices
     D = diffusion_matrix(domain, N)
-    W = filter_matrix(filter, domain, M, N; λ)
-    R = reconstruction_matrix(filter, domain, M, N; λ)
+    W = filter_matrix(filter, domain, M, N; degmax, λ)
+    R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
     A = spdiagm(α.(ξ))
 
     # Initial conditions

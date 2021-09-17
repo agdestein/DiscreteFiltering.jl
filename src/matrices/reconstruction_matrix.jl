@@ -154,7 +154,7 @@ function reconstruction_matrix(
         # Polynomial basis
         Q = min(degmax + 1, Mₙ)
         # Q = min(degmax + 1, max(1, Mₙ == 2 ? 2 : 3 ≤ Mₙ < 9 ? 3 : floor(Int, √Mₙ)))
-        ϕ = chebyshevt.(0:Q-1, [minimum(xₘ - 3hₘ)..maximum(xₘ + 3hₘ)])
+        ϕ = chebyshevt.(0:Q-1, [minimum(xₘ - 1.5hₘ)..maximum(xₘ + 1.5hₘ)])
         # ϕ = chebyshevt.(0:Q-1, [domain.left..domain.right])
         ϕ_int = integrate.(ϕ)
 

@@ -4,7 +4,7 @@ module DiscreteFiltering
 using ApproxFun: Fun, chebyshevt, integrate, Interval, (..)
 using ForwardDiff: derivative
 using IntervalSets: ±
-using LinearAlgebra: I, mul!
+using LinearAlgebra: I, mul!, factorize, ldiv!, lu
 using OrdinaryDiffEq: OrdinaryDiffEq
 using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, DiffEqArrayOperator, LinearExponential
 using Parameters: @unpack

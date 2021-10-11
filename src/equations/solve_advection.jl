@@ -35,7 +35,7 @@ function solve(
 
     x = discretize(domain, M)
     ξ = discretize(domain, N)
-    
+
     ū = apply_filter(u, filter, domain)
 
     if method == "filterfirst"
@@ -70,6 +70,31 @@ function solve(
             Mdu!,
             jac = (J, u, p, t) -> (J .= p.J),
             jac_prototype = p.J,
+            # mass_matrix = W * R,
+        )
+        problem = ODEProblem(odefunction, ūₕ, tlist, p)
+        solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
+    elseif method == "discretizefirst-without-R"
+        # Get matrices
+        C = advection_matrix(domain, N)
+        D = diffusion_matrix(domain, N)
+        W = filter_matrix(filter, domain, M, N; degmax, λ)
+        # A = factorize(W'W + λ * I)
+        A = lu(W'W + λ * I)
+        J = -W * C
+        ūₕ = ū.(x)
+        # ūₕ = W * u.(ξ)
+        p = (; u☆ = zeros(N), utmp = zeros(N), J, A)
+        function Mdu!_without_R(dū, ū, p, t)
+            @unpack u☆, utmp, A = p
+            mul!(utmp, W', ū)
+            ldiv!(u☆, A, utmp)
+            mul!(dū, p.J, u☆)
+        end
+        odefunction = ODEFunction(
+            Mdu!_without_R,
+            # jac = (J, u, p, t) -> (J .= p.J),
+            # jac_prototype = p.J,
             # mass_matrix = W * R,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)

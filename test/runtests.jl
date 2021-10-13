@@ -27,4 +27,8 @@ using Test
         include("equations/solve_burgers.jl")
         include("equations/solve_adbc.jl")
     end
+
+    @testset "Utils" begin
+        include("utils/ridge.jl")
+    end
 end

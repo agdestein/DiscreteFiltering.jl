@@ -38,16 +38,33 @@ function solve(
 
     ū = apply_filter(u, filter, domain)
 
+    h = filter.width
+    dh(x) = derivative(h, x)
+    α(x) = 1 / 3 * dh(x) * h(x)
+
+    # Get matrices
+    C = advection_matrix(domain, N)
+    D = diffusion_matrix(domain, N)
+
     if method == "filterfirst"
-        # Get matrices
-        C = advection_matrix(domain, N)
-        D = diffusion_matrix(domain, N)
+        F === TopHatFilter ||
+            error("Method \"filterfirst\" is only implemented for TopHatFilter")
+        ūₕ = ū.(ξ)
+        A = spdiagm(α.(ξ))
+        J = DiffEqArrayOperator(-C + A * D)
+        p = (; J)
+        Mdu_taylor!(du, u, p, t) = mul!(du, p.J, u)
+        odefunction = ODEFunction(
+            Mdu_taylor!,
+            jac = (J, u, p, t) -> (J .= p.J),
+            jac_prototype = p.J,
+        )
+        problem = ODEProblem(odefunction, ūₕ, tlist, p)
+        solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
+    elseif method == "filterfirst_exp"
         F === TopHatFilter ||
             error("Method \"filterfirst\" is only implemented for TopHatFilter")
         # M == N || @warn "Method \"filterfirst\" will only use M"
-        h = filter.width
-        dh(x) = derivative(h, x)
-        α(x) = 1 / 3 * dh(x) * h(x)
         A = spdiagm(α.(ξ))
         J = DiffEqArrayOperator(-C + A * D)
         ūₕ = ū.(ξ)
@@ -57,9 +74,6 @@ function solve(
             LinearExponential(krylov = :simple, m = subspacedim),
         )
     elseif method == "discretizefirst"
-        # Get matrices
-        C = advection_matrix(domain, N)
-        D = diffusion_matrix(domain, N)
         W = filter_matrix(filter, domain, M, N; degmax, λ)
         R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
         ūₕ = ū.(x)
@@ -70,15 +84,14 @@ function solve(
             Mdu!,
             jac = (J, u, p, t) -> (J .= p.J),
             jac_prototype = p.J,
-            # mass_matrix = W * R,
+            mass_matrix = W * R,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
         solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
     elseif method == "discretizefirst-without-R"
-        # Get matrices
-        C = advection_matrix(domain, N)
-        D = diffusion_matrix(domain, N)
-        W = filter_matrix(filter, domain, M, N; degmax, λ)
+        λ_W = 1e-8
+        W = filter_matrix(filter, domain, M, N; degmax, λ = λ_W)
+        println("abs: $(sum(sum.(abs, eachrow(W)))/M), sum: $(sum(W) / M)")
         # A = factorize(W'W + λ * I)
         A = lu(W'W + λ * I)
         J = -W * C

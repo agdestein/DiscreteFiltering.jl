@@ -30,6 +30,7 @@ function solve(
     abstol = 1e-6,
     degmax = 10,
     λ = 1e-6,
+    λ_ridge = 1e-8,
 ) where {T,F}
     @unpack domain, filter = equation
 
@@ -54,11 +55,8 @@ function solve(
         J = DiffEqArrayOperator(-C + A * D)
         p = (; J)
         Mdu_taylor!(du, u, p, t) = mul!(du, p.J, u)
-        odefunction = ODEFunction(
-            Mdu_taylor!,
-            jac = (J, u, p, t) -> (J .= p.J),
-            jac_prototype = p.J,
-        )
+        odefunction =
+            ODEFunction(Mdu_taylor!, jac = (J, u, p, t) -> (J .= p.J), jac_prototype = p.J)
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
         solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
     elseif method == "filterfirst_exp"
@@ -74,8 +72,9 @@ function solve(
             LinearExponential(krylov = :simple, m = subspacedim),
         )
     elseif method == "discretizefirst"
-        W = filter_matrix(filter, domain, M, N; degmax, λ)
-        R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
+        # W = filter_matrix(filter, domain, M, N; degmax, λ)
+        # R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
+        W, R = get_W_R(filter, domain, M, N; degmax, λ)
         ūₕ = ū.(x)
         # ūₕ = W * u.(ξ)
         p = (; J = -W * C * R)
@@ -84,14 +83,13 @@ function solve(
             Mdu!,
             jac = (J, u, p, t) -> (J .= p.J),
             jac_prototype = p.J,
-            mass_matrix = W * R,
+            # mass_matrix = W * R,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
         solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
     elseif method == "discretizefirst-without-R"
-        λ_W = 1e-8
-        W = filter_matrix(filter, domain, M, N; degmax, λ = λ_W)
-        println("abs: $(sum(sum.(abs, eachrow(W)))/M), sum: $(sum(W) / M)")
+        W = filter_matrix(filter, domain, M, N; degmax, λ = λ_ridge)
+        # println(W[M ÷ 2, :])
         # A = factorize(W'W + λ * I)
         A = lu(W'W + λ * I)
         J = -W * C

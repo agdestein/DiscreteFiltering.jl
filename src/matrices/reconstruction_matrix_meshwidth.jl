@@ -1,6 +1,6 @@
 
 """
-reconstruction_matrix_meshwidth(f, domain, N)
+    reconstruction_matrix_meshwidth(f, domain, N)
 
 Assemble inverse discrete filtering matrix from a continuous filter `f` width constant width
 \$h(x) = \\Delta x / 2\$.

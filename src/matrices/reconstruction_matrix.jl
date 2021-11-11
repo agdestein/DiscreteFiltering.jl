@@ -140,6 +140,12 @@ function reconstruction_matrix(
 
         # Find m such that ξₙ is reachable from xₘ and include one point outside
         m = dists[mininds][:] .< 1.5h.(x)
+        if !any(m)
+            # No coarse point is inside the interval. Set closest weight to one
+            m = argmin(dists; dims = (1,2))[1].I[1]
+            R[n, m] = 1
+            continue
+        end
         # m = mapreduce(s -> circshift(m, s), .|, [-1, 0, 1])
         hₘ = h.(x[m]')
         sₘ = L * (shifts[m]' .- 2)
@@ -157,7 +163,6 @@ function reconstruction_matrix(
         ϕ = chebyshevt.(0:Q-1, [minimum(xₘ - 1.5hₘ)..maximum(xₘ + 1.5hₘ)])
         # ϕ = chebyshevt.(0:Q-1, [domain.left..domain.right])
         ϕ_int = integrate.(ϕ)
-
         # Build reconstruction system
         Zₙ = spzeros(Q, Mₙ)
         vₙ = zeros(Q)
@@ -280,7 +285,7 @@ function reconstruction_matrix(
         # ivals = Interval.(aₘ, bₘ)
         Mₙ = sum(m)
 
-        # Polynomial degree (Taylor series order)
+        # Polynomial degree
         Q = min(degmax + 1, Mₙ)
         # Q = min(degmax + 1, max(1, Mₙ == 2 ? 2 : 3 ≤ Mₙ < 9 ? 3 : floor(Int, √Mₙ)))
         ϕ = chebyshevt.(0:Q-1, [minimum(xₘ - hₘ)..maximum(xₘ + hₘ)])

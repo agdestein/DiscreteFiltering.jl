@@ -4,7 +4,7 @@ module DiscreteFiltering
 using ApproxFun: Fun, chebyshevt, integrate, Interval, (..)
 using ForwardDiff: derivative
 using IntervalSets: ±
-using LinearAlgebra: I, mul!, factorize, ldiv!, lu
+using LinearAlgebra: Diagonal, I, mul!, factorize, ldiv!, lu
 using OrdinaryDiffEq: OrdinaryDiffEq
 using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, DiffEqArrayOperator, LinearExponential
 using Parameters: @unpack
@@ -13,6 +13,7 @@ using NonNegLeastSquares: nonneg_lsq
 
 # Domain
 include("domain/domain.jl")
+include("domain/get_npoint.jl")
 include("domain/discretize.jl")
 
 # Filter
@@ -29,6 +30,7 @@ include("matrices/filter_matrix.jl")
 include("matrices/filter_matrix_meshwidth.jl")
 include("matrices/reconstruction_matrix.jl")
 include("matrices/reconstruction_matrix_meshwidth.jl")
+include("matrices/get_W_R.jl")
 
 # Equations
 include("equations/equations.jl")
@@ -39,7 +41,7 @@ include("equations/solve_adbc.jl")
 include("utils/ridge.jl")
 
 # Domain
-export ClosedIntervalDomain, PeriodicIntervalDomain, discretize
+export ClosedIntervalDomain, PeriodicIntervalDomain, discretize, get_npoint
 
 # Filter
 export IdentityFilter
@@ -57,6 +59,7 @@ export filter_matrix
 export filter_matrix_meshwidth
 export reconstruction_matrix
 export reconstruction_matrix_meshwidth
+export get_W_R
 
 # Equations
 export AdvectionEquation, DiffusionEquation, BurgersEquation, solve, solve_adbc

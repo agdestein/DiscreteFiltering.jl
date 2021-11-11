@@ -32,7 +32,7 @@ function filter_matrix(
         # Filter width at point
         hₘ = h(xₘ)
 
-        # Indices of integration points inside domaain
+        # Indices of integration points inside domain
         ival = (xₘ ± hₘ) ∩ ival_domain
         ival_double = (xₘ ± 2hₘ) ∩ ival_domain
         n = ξ .∈ [ival_double]
@@ -109,9 +109,10 @@ function filter_matrix(
         Vₘ = spzeros(P, Nₘ)
         zₘ = zeros(P)
         for p = 1:P
-        # Polynomials evaluated at integration points
+            # Polynomials evaluated at integration points
             Vₘ[p, :] = ϕ[p].(ξₙ)
-        # Polynomial moments around point
+
+            # Polynomial moments around point
             zₘ[p] = (ϕ_int[p](ival.right) - ϕ_int[p](ival.left)) / 2hₘ
         end
 
@@ -230,9 +231,10 @@ function filter_matrix(
         zₘ = zeros(P)
         # Fill in
         for p = 1:P
-        # Polynomials evaluated at integration points
+            # Polynomials evaluated at integration points
             Vₘ[p, :] = ϕ[p].(ξₙ)
-        # Polynomial moments around point
+
+            # Polynomial moments around point
             zₘ[p] = sum(kern * ϕ[p])
         end
 

@@ -127,8 +127,8 @@ function solve_adbc(
     w₀ = W[1, :]
     wₙ = W[end, :]
 
-    Ga = G.(x[2:end-1] .- a)
-    Gb = G.(b .- x[2:end-1])
+    G_a = G.(x[2:end-1] .- a)
+    G_b = G.(b .- x[2:end-1])
 
     f̄ᵏ_constant = apply_filter_extend(x -> f(x, tlist[1]), filter, domain).(x[2:end-1])
 
@@ -174,7 +174,9 @@ function solve_adbc(
         end
 
         # Next inner points for filtered solution
-        du[2:end-1] .= Dūᵏ[2:end-1] .+ f̄ᵏ .+ Gb .* uₓ_b .- Ga .* uₓ_a
+        du_in = @view du[2:end-1] 
+        Dūᵏ_in = @view Dūᵏ[2:end-1] 
+        @. du_in = Dūᵏ_in + f̄ᵏ + G_b * uₓ_b - G_a * uₓ_a
     end
 
     function perform_step_euler!(ūᵏ, tᵏ, Δt, p)

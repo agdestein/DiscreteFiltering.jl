@@ -6,7 +6,7 @@ using ForwardDiff: derivative
 using IntervalSets: ±
 using LinearAlgebra: Diagonal, I, mul!, factorize, ldiv!, lu
 using OrdinaryDiffEq: OrdinaryDiffEq
-using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, DiffEqArrayOperator, LinearExponential
+using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, RK4, DiffEqArrayOperator, LinearExponential
 using Parameters: @unpack
 using SparseArrays: dropzeros!, sparse, spdiagm, spzeros
 using NonNegLeastSquares: nonneg_lsq

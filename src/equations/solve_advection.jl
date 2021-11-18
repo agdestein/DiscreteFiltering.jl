@@ -38,10 +38,11 @@ function solve(
     ξ = discretize(domain, N)
 
     ū = apply_filter(u, filter, domain)
-
-    h = filter.width
-    dh(x) = derivative(h, x)
-    α(x) = 1 / 3 * dh(x) * h(x)
+    if filter isa TopHatFilter 
+        h = filter.width
+        dh(x) = derivative(h, x)
+        α(x) = 1 / 3 * dh(x) * h(x)
+    end
 
     # Get matrices
     C = advection_matrix(domain, N)
@@ -97,10 +98,10 @@ function solve(
         # ūₕ = W * u.(ξ)
         p = (; u☆ = zeros(N), utmp = zeros(N), J, A)
         function Mdu!_without_R(dū, ū, p, t)
-            @unpack u☆, utmp, A = p
+            @unpack u☆, utmp, J, A = p
             mul!(utmp, W', ū)
             ldiv!(u☆, A, utmp)
-            mul!(dū, p.J, u☆)
+            mul!(dū, J, u☆)
         end
         odefunction = ODEFunction(
             Mdu!_without_R,

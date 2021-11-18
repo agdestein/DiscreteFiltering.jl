@@ -1,7 +1,7 @@
 """
     get_W_R(f::TopHatFilter, domain, M, N; kwargs...)
 
-Construct `W` and `R` using a simplified counter rule. 
+Construct `W` and `R` using a simplified counter rule.
 
     get_W_R(f, domain, M, N; kwargs...)
 
@@ -24,12 +24,14 @@ function get_W_R(f::TopHatFilter, domain::AbstractIntervalDomain, M, N; kwargs..
     x = discretize(domain, M)
     ξ = discretize(domain, N)
     W = spzeros(eltype(x), length(x), length(ξ))
+    NN = zeros(Int, M)
     for m = 1:length(x)
         xₘ = x[m]
         # nₘ = @. (-h₀ < (ξ - x[m]) ≤ h₀)
         nₘ = mapreduce(ℓ -> -h(xₘ) .< (ξ .+ ℓ .- xₘ) .≤ h(xₘ), .|, ℒ)
         Nₘ = sum(nₘ)
         W[m, nₘ] .= 1 // Nₘ
+        NN[m] = Nₘ
     end
 
     hx = h.(x)
@@ -37,10 +39,10 @@ function get_W_R(f::TopHatFilter, domain::AbstractIntervalDomain, M, N; kwargs..
     for n = 1:length(ξ)
         ξₙ = ξ[n]
         mₙ = mapreduce(ℓ -> -hx .< (ξₙ .+ ℓ .- x) .≤ hx, .|, ℒ)
-        Mₙ = sum(mₙ)
-        R[n, mₙ] .= 1 // Mₙ
+        Nₘ = NN[mₙ]
+        # R[n, mₙ] .= 1 .// Nₘ / sum(1 .// Nₘ)
+        R[n, mₙ] .= 1 ./ Nₘ / sum(1 ./ Nₘ)
     end
 
     W, R
 end
-

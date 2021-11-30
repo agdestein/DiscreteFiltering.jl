@@ -10,6 +10,7 @@
         solver = QNDF(),
         reltol = 1e-4,
         abstol = 1e-6,
+        C̄ = nothing,
     ) where {T,F}
 
 Solve `equation` from `tlist[1]` to `tlist[2]` with initial conditions `u` and a
@@ -31,6 +32,7 @@ function solve(
     degmax = 10,
     λ = 1e-6,
     λ_ridge = 1e-8,
+    C̄ = nothing,
 ) where {T,F}
     @unpack domain, filter = equation
 
@@ -108,6 +110,17 @@ function solve(
             # jac = (J, u, p, t) -> (J .= p.J),
             # jac_prototype = p.J,
             # mass_matrix = W * R,
+        )
+        problem = ODEProblem(odefunction, ūₕ, tlist, p)
+        solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)
+    elseif method == "discretizefirst-fit-Cbar"
+        ūₕ = ū.(x)
+        p = (; J = -C̄)
+        Mdu!_C̄(du, u, p, t) = mul!(du, p.J, u)
+        odefunction = ODEFunction(
+            Mdu!_C̄,
+            jac = (J, u, p, t) -> (J .= p.J),
+            jac_prototype = p.J,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
         solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)

@@ -5,6 +5,7 @@ using ApproxFun: Fun, chebyshevt, integrate, Interval, (..)
 using ForwardDiff: derivative
 using IntervalSets: ±
 using LinearAlgebra: Diagonal, I, mul!, factorize, ldiv!, lu
+using MLJLinearModels: LassoRegression, RidgeRegression, fit
 using OrdinaryDiffEq: OrdinaryDiffEq
 using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, RK4, DiffEqArrayOperator, LinearExponential
 using Parameters: @unpack
@@ -31,6 +32,7 @@ include("matrices/filter_matrix_meshwidth.jl")
 include("matrices/reconstruction_matrix.jl")
 include("matrices/reconstruction_matrix_meshwidth.jl")
 include("matrices/get_W_R.jl")
+include("matrices/fit_Cbar.jl")
 
 # Equations
 include("equations/equations.jl")
@@ -39,6 +41,7 @@ include("equations/solve_adbc.jl")
 
 # Utils
 include("utils/ridge.jl")
+include("utils/sum_of_sines.jl")
 
 # Domain
 export ClosedIntervalDomain, PeriodicIntervalDomain, discretize, get_npoint
@@ -60,8 +63,12 @@ export filter_matrix_meshwidth
 export reconstruction_matrix
 export reconstruction_matrix_meshwidth
 export get_W_R
+export fit_Cbar
 
 # Equations
 export AdvectionEquation, DiffusionEquation, BurgersEquation, solve, solve_adbc
+
+# Utils
+export sum_of_sines
 
 end

@@ -1,16 +1,16 @@
 """
-    fit_Cbar(domain, filter::TopHatFilter, u₀, U₀, M, t; λ = 1e-4, method = :ridge)
+    fit_Dbar(domain, filter::TopHatFilter, u₀, U₀, M, t; λ = 1e-4, method = :ridge)
 
 Fit the filtered convection matrix `C̄` for a `TopHatFilter`, given a list of initial
 conditions `u₀` and associated antiderivatives `U₀`.
 
 The unfiltered equation is given by
 
-``\\frac{d u_h}{d t} + C u_h = 0.``
+``\\frac{d u_h}{d t} = D u_h.``
 
 The associated filtered equation is
 
-``\\frac{d \\bar{u}_h}{d t} + \\bar{C} \\bar{u}_h = 0.``
+``\\frac{d \\bar{u}_h}{d t} = \\bar{D} \\bar{u}_h.``
 
 This function fits `C̄` using a regularized least-squares regression based on
 the above equation evaluated at different time steps and spatial points.
@@ -19,7 +19,7 @@ able to identify sparsity.
 
 The sparsity pattern of `C̄` is also enforced as a constraint.
 """
-function fit_Cbar(domain, filter::TopHatFilter, u₀, U₀, M, t; λ = 1e-4, method = :ridge)
+function fit_Dbar(domain, filter::TopHatFilter, u₀, U₀, M, t; λ = 1e-4, method = :ridge)
     L = domain.right - domain.left
     x = discretize(domain, M)
     h = filter.width
@@ -51,49 +51,6 @@ function fit_Cbar(domain, filter::TopHatFilter, u₀, U₀, M, t; λ = 1e-4, met
         c̄ = fit(reg, Uₘ', Uₜ[m, :])
         # c̄ = (Uₘ * Uₘ' + λ * I) \ (Uₘ * Uₜ[m, :])
         C̄[m, nₘ] = -c̄
-        # c̄ = fit(reg, U', Uₜ[m, :])
-        # C̄[m, :] = -c̄
-    end
-
-    C̄
-end
-
-function fit_Cbar_approx(domain, filter::TopHatFilter, uₓ, u, M, t; λ = 1e-4, method = :ridge)
-    L = domain.right - domain.left
-    x = discretize(domain, M)
-    h = filter.width
-
-    # Observation matrices
-    Uₜ = zeros(M, 0)
-    U = zeros(M, 0)
-    for (uₓ, u) ∈ zip(uₓ, u)
-        Uₜ = [Uₜ uₓ.(x .- t')]
-        U = [U u.(x .- t')]
-    end
-
-    W = filter_matrix_meshwidth(filter, domain, M)
-    # W = I
-
-    Ūₜ = W * Uₜ
-    Ū = W * U
-
-    ℒ = domain isa PeriodicIntervalDomain ? [-L, 0, L] : [0]
-    C̄ = spzeros(M, M)
-    if method == :ridge
-        reg = RidgeRegression(λ; fit_intercept = false)
-    elseif method == :lasso
-        reg = LassoRegression(λ; fit_intercept = false)
-    else
-        error("Unsupported method")
-    end
-    for m = 1:M
-        xₘ = x[m]
-        nₘ = mapreduce(ℓ -> -h(xₘ) .< (x .+ ℓ .- xₘ) .≤ h(xₘ), .|, ℒ)
-        nₘ = mapreduce(i -> circshift(nₘ, i), .|, -1:1)
-        Uₘ = Ū[nₘ, :]
-        # c̄ = fit(reg, Uₘ', Ūₜ[m, :])
-        c̄ = (Uₘ * Uₘ' + λ * I) \ (Uₘ * Uₜ[m, :])
-        C̄[m, nₘ] = c̄
         # c̄ = fit(reg, U', Uₜ[m, :])
         # C̄[m, :] = -c̄
     end

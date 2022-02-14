@@ -1,11 +1,15 @@
+# LSP indexing solution from
+# https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983
+if isdefined(@__MODULE__, :LanguageServer)
+    include("../src/DiscreteFiltering.jl")
+    using .DiscreteFiltering
+end
+
 using DiscreteFiltering
 using LinearAlgebra
 using Plots
 using Symbolics
 using Latexify
-
-## Plot theme
-theme(:juno)
 
 ## Parameters
 # Domain
@@ -56,9 +60,10 @@ degmax = 50
 λ = 1e-9
 
 # Number of mesh points
-nrefine = 5
-NN = floor.(Int, 10 .^ LinRange(2, 4, nrefine))
-MM = round.(Int, 9 // 10 .* NN)
+nrefine = 7
+NN = floor.(Int, 10 .^ LinRange(1, 4, nrefine))
+MM = NN
+# MM = round.(Int, 9 // 10 .* NN)
 
 # Errors
 err = zeros(nrefine)
@@ -150,10 +155,10 @@ pgfplotsx()
 ξ = LinRange(a, b, 101)
 p = plot(
     xlabel = raw"$x$",
-    # size = (400, 300),
+    size = (400, 300),
     legend = :topright,
 )
-for t ∈ LinRange(0.0, T, 5)
+for t ∈ LinRange(0.0, T, 2)
     plot!(p, ξ, u.(ξ, t), label = "t = $t")
 end
 display(p)
@@ -163,12 +168,13 @@ savefig(p, "output/diffusion/solution.tikz")
 p = plot(
     xaxis = :log10,
     yaxis = :log10,
-    # size = (400, 300),
+    size = (400, 300),
     minorgrid = true,
     legend = :topright,
     # xlims = (NN[1], NN[end]),
     ylims = (1e-7, 1e0),
     xticks = 10 .^ (1:4),
+    xlabel = "N",
 )
 # plot!(p, NN, err, label = "Discretized")
 plot!(p, NN, err_adbc, marker = :c, label = "Filtered-then-discretized with ADBC")
@@ -176,7 +182,9 @@ plot!(p, NN, err_bar, marker = :d, label = "Discretized-then-filtered")
 plot!(p, NN, 10 ./ NN .^ 2, linestyle = :dash, label = "\$10 / N^2\$")
 # plot!(p, NN, 20 ./ NN .^ 2, linestyle = :dash, label = raw"$20 N^{-2}$")
 # plot!(p, NN, 10 ./ NN .^ 1.5, linestyle = :dash, label = raw"$10 N^{-3/2}}$")
-xlabel!(p, raw"$N$")
-# title!(p, raw"Heat equation, $h(x) = \Delta x / 2$")
-display(p)
-# savefig(p, "output/diffusion/convergence.tikz")
+# display(p);
+# output = "output/diffusion/convergence.tikz"
+output = "output/diffusion/convergence.pdf"
+savefig(output)
+
+run(`zathura $output`; wait = false)

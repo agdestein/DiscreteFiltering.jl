@@ -75,9 +75,9 @@ function solve(
             LinearExponential(krylov = :simple, m = subspacedim),
         )
     elseif method == "discretizefirst"
-        # W = filter_matrix(filter, domain, M, N; degmax, λ)
-        # R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
-        W, R = get_W_R(filter, domain, M, N; degmax, λ)
+        W = filter_matrix(filter, domain, M, N; degmax, λ)
+        R = reconstruction_matrix(filter, domain, M, N; degmax, λ)
+        # W, R = get_W_R(filter, domain, M, N; degmax, λ)
         ūₕ = ū.(x)
         # ūₕ = W * u.(ξ)
         p = (; J = -W * C * R)
@@ -86,7 +86,7 @@ function solve(
             Mdu!,
             jac = (J, u, p, t) -> (J .= p.J),
             jac_prototype = p.J,
-            # mass_matrix = W * R,
+            mass_matrix = W * R,
         )
         problem = ODEProblem(odefunction, ūₕ, tlist, p)
         solution = OrdinaryDiffEq.solve(problem, solver; reltol, abstol)

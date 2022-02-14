@@ -1,8 +1,15 @@
-using DiscreteFiltering
 using LinearAlgebra
 using Plots
 using SparseArrays
 
+# LSP indexing solution from
+# https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983
+if isdefined(@__MODULE__, :LanguageServer)
+    include("../src/DiscreteFiltering.jl")
+    using .DiscreteFiltering
+else
+    using DiscreteFiltering
+end
 
 ## Domain
 a = 0.0

@@ -1,9 +1,14 @@
+# LSP indexing solution from
+# https://github.com/julia-vscode/julia-vscode/issues/800#issuecomment-650085983
+if isdefined(@__MODULE__, :LanguageServer)
+    include("../src/DiscreteFiltering.jl")
+    using .DiscreteFiltering
+end
+
 using DiscreteFiltering
 using LinearAlgebra
 using Plots
-using ProgressLogging
 using OrdinaryDiffEq: RK4
-
 
 ## Parameters
 
@@ -41,7 +46,7 @@ c = [
     [0],
     [2, 3],
     [1, 5, 20],
-    (rand(1:10, 5)),
+    rand(1:10, 5),
 ]
 
 # Phase-shifts
@@ -53,18 +58,19 @@ c = [
 ]
 
 # Number of time steps for fitting C̄
-nₜ = 500
+nₜ = 10000
 t = LinRange(0, T, nₜ)
-UU = sum_of_sines.([domain], c, ω, ϕ) 
-u₀_list = [UU[1] for UU ∈ UU] 
-U₀_list = [UU[2] for UU ∈ UU] 
+s = sum_of_sines.([domain], c, ω, ϕ) 
+u₀_list = [s.u for s ∈ s] 
+U₀_list = [s.U for s ∈ s] 
 
 # Number of mesh points
-nrefine = 10
+nrefine = 20
 MM = floor.(Int, 10 .^ LinRange(1, 4, nrefine))
 NN = MM
 # NN = floor.(Int, 5 // 4 .* MM)
 # λλ = [0, 0, 0, 0, 1e-1]
+h₀ = (b - a) / 100
 
 # Errors
 err = zeros(nrefine)
@@ -74,12 +80,12 @@ err_allbar = zeros(nrefine)
 ## Solve
 @time for i = 1:nrefine
     # λ = λλ[i]
-    λ = 1e-8
-    λ_ridge = 1e-8
+    λ = 1e-4
+    λ_ridge = 1e-4
     # M = 100
     M = MM[i]
     # N = NN[i]
-    N = 1000 # NN[i]
+    N = M # NN[i]
     # M = N
 
     println("Solving for M = $M and N = $N")
@@ -89,8 +95,8 @@ err_allbar = zeros(nrefine)
     Δx = (b - a) / M
 
     # Filter
-    h₀ = 1.0Δx
-    # h₀ = (b - a) / 200
+    # h₀ = 1.0Δx
+    # h₀ = (b - a) / 100
     # h₀ = Δx / 2
     h(x) = h₀ * (1 - 1 / 2 * cos(x))
     # h(x) = 0.49999Δx
@@ -120,7 +126,7 @@ err_allbar = zeros(nrefine)
         λ,
     )
 
-    # Solve filtered-then-discretized problem
+    # # Solve filtered-then-discretized problem
     # sol_bar = solve(
     #     equation_filtered,
     #     ξ -> u(ξ, 0.0),
@@ -128,6 +134,7 @@ err_allbar = zeros(nrefine)
     #     M,
     #     M;
     #     method = "filterfirst",
+    #     # solver = RK4(),
     #     subspacedim,
     #     tols...,
     #     degmax,
@@ -167,10 +174,11 @@ err_allbar = zeros(nrefine)
     # err_bar[i] = norm(sol_bar(T) - ū.(x)) / norm(ū.(x))
     err_allbar[i] = norm(sol_allbar(T) - ū_exact) / norm(ū_exact)
     # println("λ = $λ, err = $(err_allbar[i])")
-    println("λ = $λ, err_bar = $(err_bar[i]), err_allbar = $(err_allbar[i])")
+    @info err[i] err_bar[i] err_allbar[i]
 end
 
 ## Set PGFPlotsX plotting backend to export to tikz
+using PGFPlotsX
 pgfplotsx()
 
 ## In terminal plots
@@ -179,25 +187,45 @@ unicodeplots()
 ## Default backend
 gr()
 
+colors = 1:100
+
 ##
+i = 0
 p = plot(
     xaxis = :log10,
     yaxis = :log10,
     minorgrid = true,
     # size = (400, 300),
-    legend = :bottomleft,
+    legend = :bottomright,
     # xlims = (10, 10^4),
-    ylims = (1e-6, 1e-0),
-    xticks = 10 .^ (1:4),
-    xlabel = "M",
+    ylims = (1e-5, 1e-0),
+    # xticks = 10 .^ (1:4),
+    # xlabel = "M",
+    xlabel = "Δx",
     # title = "N = 1000"
 );
-plot!(p, MM, err_allbar; label = "Data driven Cbar, HF", marker = :d, color = 2);
-# plot!(p, MM, err_allbar_lf; label = "Data driven Cbar, LF", marker = :d, color = 1);
-plot!(p, MM, err; label = "Without filter, HF", marker = :c, linestyle = :dash, color = 2);
+# plot!(p, MM, err; label = "Without filter", marker = :c, linestyle = :dash, color = colors[i += 1]);
+# plot!(p, MM, err_bar; label = "Classical", marker = :square, linestyle = :dash);
+# plot!(p, MM, err_pol; label = "Polynomial", marker = :v);
+# plot!(p, MM, err_pol_mass; label = "Polynomial with mass", marker = :<);
+# plot!(p, MM, err_reg; label = "Regularized \"W⁻¹\"", marker = :s);
+# plot!(p, MM, err_oi; label = "Data driven Cbar", marker = :d);
+# plot!(p, MM, err_allbar; label = "err_allbar", marker = :<, color = colors[i += 1]);
+# plot!(p, MM, err_lf; label = "Without filter, LF", marker = :c, linestyle = :dash, color = colors[i += 1]);
+# plot!(p, MM, err_allbar_lf; label = "Data driven, LF", marker = :<, color = colors[i += 1]);
+# plot!(p, MM, err_hf; label = "Without filter, HF", marker = :c, linestyle = :dash, color = colors[i += 1]);
+# plot!(p, MM, err_allbar_hf; label = "Data driven, HF", marker = :<, color = colors[i += 1]);
+plot!(p, (b - a) ./ MM, err_lf; label = "Without filter, LF", marker = :c, linestyle = :dash, color = colors[i += 1]);
+plot!(p, (b - a) ./ MM, err_allbar_lf; label = "Data driven, LF", marker = :<, color = colors[i]);
+plot!(p, (b - a) ./ MM, err_hf; label = "Without filter, HF", marker = :c, linestyle = :dash, color = colors[i += 1]);
+plot!(p, (b - a) ./ MM, err_allbar_hf; label = "Data driven, HF", marker = :<, color = colors[i]);
+vline!(p, [h₀], label = "Filter width", color = colors[i += 1]);
+vline!(p, [0.5h₀, 1.5h₀], label = "", color = colors[i], linestyle = :dash);
 # plot!(p, MM, err_lf; label = "Without filter, LF", marker = :c, linestyle = :dash, color = 1);
 # display(p)
 # output = "output/advection/Cbar.tikz"
 output = "output/advection/Cbar.pdf"
+# output = "/tmp/toto.pdf"
 savefig(p, output)
 
+run(`zathura $output`; wait = false)

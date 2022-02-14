@@ -63,7 +63,7 @@ export filter_matrix_meshwidth
 export reconstruction_matrix
 export reconstruction_matrix_meshwidth
 export get_W_R
-export fit_Cbar
+export fit_Cbar, fit_Cbar_approx
 
 # Equations
 export AdvectionEquation, DiffusionEquation, BurgersEquation, solve, solve_adbc

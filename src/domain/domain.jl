@@ -5,14 +5,12 @@ Abstract type for different domains.
 """
 abstract type Domain end
 
-
 """
     ClosedIntervalDomain
 
 Abstract type for interval domains.
 """
 abstract type AbstractIntervalDomain <: Domain end
-
 
 """
     ClosedIntervalDomain(left, right)
@@ -23,7 +21,6 @@ struct ClosedIntervalDomain{T} <: AbstractIntervalDomain
     left::T
     right::T
 end
-
 
 """
     PeriodicIntervalDomain(left, right)

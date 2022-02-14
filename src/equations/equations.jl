@@ -35,9 +35,15 @@ end
 """
     BurgersEquation(domain, filter = IdentityFilter())
 
-Filtered Burgers equation.
+Filtered Burgers equation
+
+```math
+    \\frac{\\partial u}{\\partial t} + \\frac{1}{2} \\frac{\\partial u^2}{\\partial{x}} =
+    \\nu \\frac{\\partial^2 u}{\\partial x^2}
+```
 """
-Base.@kwdef struct BurgersEquation{D<:Domain,F<:Filter} <: Equation
+Base.@kwdef struct BurgersEquation{D<:Domain,F<:Filter,T} <: Equation
     domain::D
     filter::F = IdentityFilter()
+    ν::T = 0
 end

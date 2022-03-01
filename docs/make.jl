@@ -10,7 +10,7 @@ DocMeta.setdocmeta!(
 
 makedocs(;
     modules = [DiscreteFiltering],
-    authors = "Syver Døving Agdestein <syverda@icloud.com> and contributors",
+    authors = "Syver Døving Agdestein and contributors",
     repo = "https://github.com/agdestein/DiscreteFiltering.jl/blob/{commit}{path}#{line}",
     sitename = "DiscreteFiltering.jl",
     format = Documenter.HTML(;

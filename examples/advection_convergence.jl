@@ -106,7 +106,7 @@ err_allbar = zeros(nrefine)
     # σ = h₀/2
     # filter = GaussianFilter(h, σ)
 
-    C̄ = fit_Cbar(domain, filter, u₀_list, U₀_list, M, t; λ, method = :ridge)
+    C̄ = fit_Cbar(domain, filter, u₀_list, U₀_list, M, N, t; λ, method = :ridge)
 
     # Equations
     equation = AdvectionEquation(domain, IdentityFilter())

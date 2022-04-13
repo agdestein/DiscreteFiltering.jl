@@ -2,15 +2,17 @@
 module DiscreteFiltering
 
 using ApproxFun: Fun, chebyshevt, integrate, Interval, (..)
-using ForwardDiff: derivative
+using ForwardDiff
 using IntervalSets: ±
-using LinearAlgebra: Diagonal, I, mul!, factorize, ldiv!, lu
-using MLJLinearModels: LassoRegression, RidgeRegression, fit
+using LinearAlgebra
+using Makie: Makie
+using MLJLinearModels
 using OrdinaryDiffEq: OrdinaryDiffEq
 using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, RK4, DiffEqArrayOperator, LinearExponential
-using Parameters: @unpack
-using SparseArrays: dropzeros!, sparse, spdiagm, spzeros
-using NonNegLeastSquares: nonneg_lsq
+using Parameters
+using Plots: Plots
+using SparseArrays
+using NonNegLeastSquares
 
 # Domain
 include("domain/domain.jl")
@@ -40,8 +42,10 @@ include("equations/solve.jl")
 include("equations/solve_adbc.jl")
 
 # Utils
+include("utils/circulant.jl")
 include("utils/ridge.jl")
 include("utils/sum_of_sines.jl")
+include("utils/plotmat.jl")
 
 # Domain
 export ClosedIntervalDomain, PeriodicIntervalDomain, discretize, get_npoint
@@ -69,6 +73,8 @@ export fit_Cbar, fit_Cbar_approx
 export AdvectionEquation, DiffusionEquation, BurgersEquation, solve, solve_adbc
 
 # Utils
+export circulant
 export sum_of_sines
+export pplotmat, mplotmat
 
 end

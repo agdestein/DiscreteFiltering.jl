@@ -86,7 +86,7 @@ err = zeros(length(K))
 #     s = sum_of_sines.([domain], c, ω, ϕ) 
 #     u₀_list = [s.u for s ∈ s] 
 #     U₀_list = [s.U for s ∈ s] 
-#     C̄ = fit_Cbar(domain, filter, u₀_list, U₀_list, M, t; λ, method = :ridge)
+#     C̄ = fit_Cbar(domain, filter, u₀_list, U₀_list, M, N, t; λ, method = :ridge)
 #     err[i] = norm(C̄ - C̄_exact) / norm(C̄_exact)
 # end
 s = nothing

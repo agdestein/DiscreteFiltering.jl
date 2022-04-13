@@ -19,23 +19,34 @@ able to identify sparsity.
 
 The sparsity pattern of `C̄` is also enforced as a constraint.
 """
-function fit_Cbar(domain, filter::TopHatFilter, u₀, U₀, M, t; λ = 1e-4, method = :ridge)
+function fit_Cbar(domain, filter::TopHatFilter, u₀, U₀, M, N, t; λ = 1e-4, method = :ridge)
     L = domain.right - domain.left
     x = discretize(domain, M)
+    ξ = discretize(domain, N)
     h = filter.width
 
     # Observation matrices
     U = zeros(M, 0)
     Uₜ = zeros(M, 0)
     for (u₀, U₀) ∈ zip(u₀, U₀)
-        ū(x, t) = (U₀(x + h(x) - t) - U₀(x - h(x) - t)) / 2h(x)
-        ūₜ(x, t) = -(u₀(x + h(x) - t) - u₀(x - h(x) - t)) / 2h(x)
-        U = [U ū.(x, t')]
-        Uₜ = [Uₜ ūₜ.(x, t')]
+         ū(x, t) = (U₀(x + h(x) - t) - U₀(x - h(x) - t)) / 2h(x)
+         ūₜ(x, t) = -(u₀(x + h(x) - t) - u₀(x - h(x) - t)) / 2h(x)
+         U = [U ū.(x, t')]
+         Uₜ = [Uₜ ūₜ.(x, t')]
     end
 
-    ℒ = domain isa PeriodicIntervalDomain ? [-L, 0, L] : [0]
-    C̄ = spzeros(M, M)
+    ℒ = domain isa PeriodicIntervalDomain ? (-L, 0, L) : (0,)
+    # C̄ = spzeros(M, M)
+    C̄ = zeros(M, M)
+    Cᴹ = advection_matrix(domain, M)
+    Cᴺ = advection_matrix(domain, N)
+    Wpat = [mapreduce(ℓ -> -h(x[m]) .< x[m] + ℓ - ξ[n] ≤ h(x[m]), |, ℒ) for m = 1:M, n = 1:N]
+    # Wpat = [mapreduce(ℓ -> abs(x[m] + ℓ - ξ[n]) ≤ h(x[m]), |, (-L, 0, L)) for m = 1:M, n = 1:N]
+    Wpat = mapreduce(i -> circshift(Wpat, (0, i)), .|, -2:2)
+    Cpat = Cᴺ .≠ 0
+    Rpat = Wpat'
+    inds = Wpat * Cpat * Rpat .≠ 0
+    
     if method == :ridge
         reg = RidgeRegression(λ; fit_intercept = false)
     elseif method == :lasso
@@ -43,24 +54,39 @@ function fit_Cbar(domain, filter::TopHatFilter, u₀, U₀, M, t; λ = 1e-4, met
     else
         error("Unsupported method")
     end
-    for m = 1:M
-        xₘ = x[m]
-        nₘ = mapreduce(ℓ -> -h(xₘ) .< (x .+ ℓ .- xₘ) .≤ h(xₘ), .|, ℒ)
-        nₘ = mapreduce(i -> circshift(nₘ, i), .|, -1:1)
-        Uₘ = U[nₘ, :]
-        c̄ = fit(reg, Uₘ', Uₜ[m, :])
-        # c̄ = (Uₘ * Uₘ' + λ * I) \ (Uₘ * Uₜ[m, :])
-        C̄[m, nₘ] = -c̄
-        # c̄ = fit(reg, U', Uₜ[m, :])
-        # C̄[m, :] = -c̄
-    end
+    # for m = 1:M
+    #     # nₘ = inds[m, :]
+    #     nₘ = 1:M
+    #     Uₘ = U[nₘ, :]
+    #     # Uₘ = U
+    #     # c̄ = fit(reg, Uₘ', Uₜ[m, :])
+    #     # c̄ = (Uₘ * Uₘ' + λ * I) \ (Uₘ * Uₜ[m, :] - λ * Cᴹ[m, nₘ])
+    #     c̄ = (Uₘ * Uₘ' + λ * I) \ (Uₘ * Uₜ[m, :])
+    #     C̄[m, nₘ] = -c̄
+    #     # C̄[m, :] = -c̄
+    #     # c̄ = fit(reg, U', Uₜ[m, :])
+    #     # C̄[m, :] = -c̄
+    # end
+    C̄ = -(Uₜ * U' - λ * Cᴹ) / (U * U' + λ * I)
+    # C̄ = -Uₜ * U' / (U * U' + λ * I)
 
     C̄
 end
 
-function fit_Cbar_approx(domain, filter::TopHatFilter, uₓ, u, M, t; λ = 1e-4, method = :ridge)
+function fit_Cbar_approx(
+    domain,
+    filter::TopHatFilter,
+    uₓ,
+    u,
+    M,
+    N,
+    t;
+    λ = 1e-4,
+    method = :ridge,
+)
     L = domain.right - domain.left
     x = discretize(domain, M)
+    ξ = discretize(domain, N)
     h = filter.width
 
     # Observation matrices
@@ -79,6 +105,12 @@ function fit_Cbar_approx(domain, filter::TopHatFilter, uₓ, u, M, t; λ = 1e-4,
 
     ℒ = domain isa PeriodicIntervalDomain ? [-L, 0, L] : [0]
     C̄ = spzeros(M, M)
+    Cᴺ = advection_matrix(domain, N)
+    Wpat = [mapreduce(ℓ -> -h(x[m]) .< x[m] + ℓ - ξ[n] ≤ h(x[m]), |, ℒ) for m = 1:M, n = 1:N]
+    Wpat = mapreduce(i -> circshift(Wpat, (0, i)), .|, -1:1)
+    Cpat = Cᴺ .≠ 0
+    Rpat = Wpat'
+    inds = Wpat * Cpat * Rpat .≠ 0
     if method == :ridge
         reg = RidgeRegression(λ; fit_intercept = false)
     elseif method == :lasso
@@ -87,14 +119,12 @@ function fit_Cbar_approx(domain, filter::TopHatFilter, uₓ, u, M, t; λ = 1e-4,
         error("Unsupported method")
     end
     for m = 1:M
-        xₘ = x[m]
-        nₘ = mapreduce(ℓ -> -h(xₘ) .< (x .+ ℓ .- xₘ) .≤ h(xₘ), .|, ℒ)
-        nₘ = mapreduce(i -> circshift(nₘ, i), .|, -1:1)
+        nₘ = inds[m, :]
         Uₘ = Ū[nₘ, :]
         # c̄ = fit(reg, Uₘ', Ūₜ[m, :])
-        c̄ = (Uₘ * Uₘ' + λ * I) \ (Uₘ * Uₜ[m, :])
+        c̄ = (Uₘ * Uₘ' + λ * I) \ (Uₘ * Ūₜ[m, :])
         C̄[m, nₘ] = c̄
-        # c̄ = fit(reg, U', Uₜ[m, :])
+        # c̄ = fit(reg, U', Ūₜ[m, :])
         # C̄[m, :] = -c̄
     end
 

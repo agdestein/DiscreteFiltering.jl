@@ -30,7 +30,7 @@ UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
 
 [compat]
 ApproxFun = "0.12, 0.13"
-CairoMakie = "0.6, 0.7"
+CairoMakie = "0.6, 0.7, 0.8"
 DiffEqFlux = "1"
 FFTW = "1.4"
 ForwardDiff = "0.10"

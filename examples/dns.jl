@@ -3,16 +3,14 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .DiscreteFiltering
 end
 
-using Pkg;
-Pkg.activate(".");
+using Pkg
+Pkg.activate(".")
 cd("examples")
 
 using DiscreteFiltering
 using JLD2
 using LinearAlgebra
 using SparseArrays
-using OrdinaryDiffEq
-using DiffEqFlux
 using Plots
 using LaTeXStrings
 

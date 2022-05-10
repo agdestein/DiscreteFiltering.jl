@@ -60,18 +60,36 @@ create_signal(nsample, kmax) = (;
 )
 
 u(c, ϕ) = (x, t) -> sum((c[k] * sin(2π * (k - 1) * (x - t) - ϕ[k]) for k ∈ eachindex(c)))
-∂u∂t(c, ϕ) = (x, t) -> -sum((c[k] * 2π * (k - 1) * cos(2π * (k - 1) * (x - t) - ϕ[k]) for k ∈ eachindex(c)))
-ū(c, ϕ) = (x, t) -> -c[1] * sin(ϕ[1]) - sum((c[k] / (2π * (k - 1)) * (cos(2π * (k - 1) * (x + h(x) - t) - ϕ[k]) - cos(2π * (k - 1) * (x - h(x) - t) - ϕ[k])) / 2h(x) for k ∈ eachindex(c)[2:end]))
-∂ū∂t(c, ϕ) = (x, t) -> -sum((c[k] * (sin(2π * (k - 1) * (x + h(x) - t) - ϕ[k]) - sin(2π * (k - 1) * (x - h(x) - t) - ϕ[k])) / 2h(x) for k ∈ eachindex(c)))
+∂u∂t(c, ϕ) =
+    (x, t) ->
+        -sum((
+            c[k] * 2π * (k - 1) * cos(2π * (k - 1) * (x - t) - ϕ[k]) for k ∈ eachindex(c)
+        ))
+ū(c, ϕ) =
+    (x, t) ->
+        -c[1] * sin(ϕ[1]) - sum((
+            c[k] / (2π * (k - 1)) * (
+                cos(2π * (k - 1) * (x + h(x) - t) - ϕ[k]) -
+                cos(2π * (k - 1) * (x - h(x) - t) - ϕ[k])
+            ) / 2h(x) for k ∈ eachindex(c)[2:end]
+        ))
+∂ū∂t(c, ϕ) =
+    (x, t) ->
+        -sum((
+            c[k] * (
+                sin(2π * (k - 1) * (x + h(x) - t) - ϕ[k]) -
+                sin(2π * (k - 1) * (x - h(x) - t) - ϕ[k])
+            ) / 2h(x) for k ∈ eachindex(c)
+        ))
 
 # Create data from coefficients
 function create_data(c, ϕ, x, ξ, tstops)
     @assert length(c) == length(ϕ)
     nsample = length(c)
     us = u.(c, ϕ)
-    ∂u∂ts = ∂u∂t.(c, ϕ) 
+    ∂u∂ts = ∂u∂t.(c, ϕ)
     ūs = ū.(c, ϕ)
-    ∂ū∂ts = ∂ū∂t.(c, ϕ) 
+    ∂ū∂ts = ∂ū∂t.(c, ϕ)
     ū₀_data = [ū(x, 0.0) for x ∈ x, ū ∈ ūs]
     ū_data = [ū(x, t) for x ∈ x, ū ∈ ūs, t ∈ tstops]
     ∂ū∂t_data = [∂ū∂t(x, t) for x ∈ x, ∂ū∂t ∈ ∂ū∂ts, t ∈ tstops]
@@ -93,8 +111,8 @@ function create_data(c, ϕ, x, ξ, tstops)
 
     ū₀_data = zeros(M, nsample)
     @inbounds for is = 1:nsample, (m, x) ∈ enumerate(x), k = 1:K
-        ū₀_data[m, is] += k == 1 ?
-            -c[is][1] * sin(ϕ[is][1]) :
+        ū₀_data[m, is] +=
+            k == 1 ? -c[is][1] * sin(ϕ[is][1]) :
             -c[is][k] / (2π * (k - 1)) * (
                 cos(2π * (k - 1) * (x + h(x)) - ϕ[is][k]) -
                 cos(2π * (k - 1) * (x - h(x)) - ϕ[is][k])
@@ -103,17 +121,22 @@ function create_data(c, ϕ, x, ξ, tstops)
 
     ū_data = zeros(M, nsample, nt)
     ∂ū∂t_data = zeros(M, nsample, nt)
-    @inbounds for (it, t) ∈ enumerate(tstops), is = 1:nsample, (m, x) ∈ enumerate(x), k = 1:K
-        ū_data[m, is, it] += k == 1 ?
-            -c[is][1] * sin(ϕ[is][1]) :
+    @inbounds for (it, t) ∈ enumerate(tstops),
+        is = 1:nsample,
+        (m, x) ∈ enumerate(x),
+        k = 1:K
+
+        ū_data[m, is, it] +=
+            k == 1 ? -c[is][1] * sin(ϕ[is][1]) :
             -c[is][k] / (2π * (k - 1)) * (
                 cos(2π * (k - 1) * (x + h(x) - t) - ϕ[is][k]) -
                 cos(2π * (k - 1) * (x - h(x) - t) - ϕ[is][k])
             ) / 2h(x)
-        ∂ū∂t_data[m, is, it] -= c[is][k] * (
-            sin(2π * (k - 1) * (x + h(x) - t) - ϕ[is][k]) -
-            sin(2π * (k - 1) * (x - h(x) - t) - ϕ[is][k])
-        ) / 2h(x)
+        ∂ū∂t_data[m, is, it] -=
+            c[is][k] * (
+                sin(2π * (k - 1) * (x + h(x) - t) - ϕ[is][k]) -
+                sin(2π * (k - 1) * (x - h(x) - t) - ϕ[is][k])
+            ) / 2h(x)
     end
 
     # u_data = zeros(N, nsample, nt)
@@ -158,7 +181,14 @@ function callback(Ā, loss)
     p1 = plot(; xlabel = "x", xlims = (a, b), size = (1000, 700))
     for (ii, i) ∈ enumerate(iplot)
         plot!(p1, ξ, test.ū[i].(ξ, 1T); label = nothing, color = ii)
-        scatter!(p1, x, S!(Ā, test.ū₀_data[:, i], [1T])[end]; markeralpha = 0.5, label = "i = $i", color = ii)
+        scatter!(
+            p1,
+            x,
+            S!(Ā, test.ū₀_data[:, i], [1T])[end];
+            markeralpha = 0.5,
+            label = "i = $i",
+            color = ii,
+        )
         # plot!(p1, x, S!(Ā, test.ū₀_data[:, i], [50T]; abstol = 1e-10, reltol = 1e-8)[end]; markeralpha = 0.5, label = "i = $i", color = ii, linestyle = :dash)
     end
     p2 = pplotmat(Ā .- Aᴹ)
@@ -183,7 +213,13 @@ callback(Aᴹ, loss(Aᴹ))
 function momentumloss(A, u₀, uₜ, ∂uₜ∂t, tstops)
     u = S(A, u₀, tstops)
     # sum(abs2, u - uₜ) / sum(abs2, uₜ) + 1e-1 * sum(abs2, A * u - ∂uₜ∂t) / sum(abs2, ∂uₜ∂t)
-    sum(abs2, u - uₜ) / sum(abs2, uₜ) + 1e-1 * mapreduce((u, du) -> sum(abs2, A * u - du), +, eachslice(u; dims = 3), eachslice(∂uₜ∂t; dims = 3)) / sum(abs2, ∂uₜ∂t)
+    sum(abs2, u - uₜ) / sum(abs2, uₜ) +
+    1e-1 * mapreduce(
+        (u, du) -> sum(abs2, A * u - du),
+        +,
+        eachslice(u; dims = 3),
+        eachslice(∂uₜ∂t; dims = 3),
+    ) / sum(abs2, ∂uₜ∂t)
 end
 loss(A, u₀, uₜ, tstops) = sum(abs2, S(A, u₀, tstops) - uₜ)
 # reg(Ā) = sum(abs, Ā[outside])
@@ -191,7 +227,9 @@ reg(Ā) = sum(abs2, Ā - Aᴹ) / sum(abs2, Aᴹ)
 # reg(Ā) = 1e-4 * sum(abs2, Ā - Aᴹ) + 1e-2 * sum(abs, Ā[outside])
 # reg(Ā) = 1e-3 * sum(abs, Ā[outside])
 # reg(Ā) = 0.0
-loss(Ā) = momentumloss(Ā, train.ū₀_data, train.ū_data, train.∂ū∂t_data, tstops) + 1e-3 * reg(Ā)
+loss(Ā) =
+    momentumloss(Ā, train.ū₀_data, train.ū_data, train.∂ū∂t_data, tstops) +
+    1e-3 * reg(Ā)
 loss(Aᴹ)
 
 plotmat(first(Zygote.gradient(loss, Aᴹ)))
@@ -220,8 +258,7 @@ relerr(Aᴹ, train.ū₀, train.ū)
 Ā = Aᴹ
 result_ode = DiffEqFlux.sciml_train(loss, Ā, LBFGS(); cb = callback, maxiters = 50)
 result_ode = DiffEqFlux.sciml_train(loss, Ā, ADAM(0.01); cb = callback, maxiters = 500)
-result_ode =
-    DiffEqFlux.sciml_train(loss, Ā, ADAM(0.001); cb = callback, maxiters = 500)
+result_ode = DiffEqFlux.sciml_train(loss, Ā, ADAM(0.001); cb = callback, maxiters = 500)
 Ā = result_ode.u
 
 plot(losses ./ loss(Aᴹ); yscale = :log10)

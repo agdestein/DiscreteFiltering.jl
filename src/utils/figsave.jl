@@ -1,5 +1,6 @@
 function figsave(
-    p, name;
+    p,
+    name;
     savedir = "figures/",
     suffices = ("pdf", "tikz"),
     kwargs...,

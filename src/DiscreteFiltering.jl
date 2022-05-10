@@ -1,4 +1,6 @@
-"Discrete filtering toolbox"
+"""
+Discrete filtering toolbox
+"""
 module DiscreteFiltering
 
 using DiffEqFlux
@@ -14,7 +16,8 @@ f!(du, u, A, t) = mul!(du, A, u)
 """
     S(A, u, t; kwargs...)
 
-ODE solver for given operator and IC"""
+ODE solver for given operator and IC
+"""
 function S(A, u, t; kwargs...)
     problem = ODEProblem(ODEFunction(f), u, (0.0, t[end]), A)
     solve(problem, Tsit5(); saveat = t, kwargs...)
@@ -23,7 +26,8 @@ end
 """
     S!(A, u, t; kwargs...)
 
-ODE solver for given operator and IC (mutating form)"""
+ODE solver for given operator and IC (mutating form)
+"""
 function S!(A, u, t; kwargs...)
     problem = ODEProblem(ODEFunction(f!), u, (0.0, t[end]), A)
     solve(problem, Tsit5(); saveat = t, kwargs...)

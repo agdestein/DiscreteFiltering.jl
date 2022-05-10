@@ -3,7 +3,8 @@ if isdefined(@__MODULE__, :LanguageServer)
     using .DiscreteFiltering
 end
 
-using Pkg; Pkg.activate(".")
+using Pkg;
+Pkg.activate(".");
 cd("examples")
 
 using DiscreteFiltering
@@ -16,7 +17,8 @@ using Plots
 using LaTeXStrings
 
 # Create signal
-create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) / (abs(k) + 5)^1.5, -K:K)
+create_signal(K) =
+    map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) / (abs(k) + 5)^1.5, (-K):K)
 # create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) * exp(-5 / 6 * max(abs(k), 5), -K:K)
 # create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) * exp(-0.5 * max(abs(k), 10)), -K:K)
 
@@ -51,12 +53,12 @@ c_train, c_test = load("output/coefficients.jld2", "c_train", "c_test")
 Nfine = 10000
 ξfine = LinRange(0, 1, Nfine + 1)[2:end]
 Δξfine = 1 / Nfine
-efine = [exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
-ēfine = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
+efine = [exp(2π * im * k * x) for x ∈ ξfine, k ∈ (-K):K]
+ēfine = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ (-K):K]
 Φ = efine'ēfine .* Δξfine
 # Φinv = inv(Φ)
 Φinv = (Φ'Φ + 1e-8I) \ Φ'
-Â = -2π * im * Φ * Diagonal(-K:K) * Φinv
+Â = -2π * im * Φ * Diagonal((-K):K) * Φinv
 
 # DNS discretization
 N = 1000
@@ -129,8 +131,8 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     plotmat(W)
     # plotmat(log.(W))
 
-    train = create_data_filtered(W, Aᴺ, dns_train);
-    test = create_data_filtered(W, Aᴺ, dns_test);
+    train = create_data_filtered(W, Aᴺ, dns_train)
+    test = create_data_filtered(W, Aᴺ, dns_test)
 
     # Fit non-intrusively using least squares on snapshots matrices
     Ū = reshape(train.ū, M, :)
@@ -156,7 +158,7 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     WAR = W * Aᴺ * R
     plotmat(WAR)
 
-    e = [exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
+    e = [exp(2π * im * k * x) for x ∈ x, k ∈ (-K):K]
     Ā_fourier = real.(e * Â * e') .* Δx
     plotmat(Ā_fourier)
 
@@ -179,8 +181,15 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     create_testloss(ū₀, ū, t) = (A -> relerr(A, ū₀, ū, t))
 
     Ā_intrusive = fit_intrusive(
-        Aᴹ_mat, train.ū₀, train.ū, t_train;
-        α = 0.001, β₁ = 0.9, β₂ = 0.999, ϵ = 1e-8, λ = 1e-10,
+        Aᴹ_mat,
+        train.ū₀,
+        train.ū,
+        t_train;
+        α = 0.001,
+        β₁ = 0.9,
+        β₂ = 0.999,
+        ϵ = 1e-8,
+        λ = 1e-10,
         nbatch = 100,
         niter = 500,
         nepoch = 1,
@@ -191,12 +200,13 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     )
 
     plotmat(Ā_intrusive - Aᴹ)
- 
+
     eAᴹ[i] = relerr(Aᴹ, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
     # eĀ_classic[i] = relerr(Ā_classic, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
     eWAR[i] = relerr(WAR, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
     eĀ_ls[i] = relerr(Ā_ls, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    eĀ_intrusive[i] = relerr(Ā_intrusive, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eĀ_intrusive[i] =
+        relerr(Ā_intrusive, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
     # eĀ_fourier[i] = relerr(Ā_fourier, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
     @show(
@@ -208,7 +218,7 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
         eĀ_ls[i],
         eĀ_intrusive[i],
         # eĀ_fourier[i],
-    );
+    )
 end
 
 jldsave("output/$filtername/A_intrusive_$M.jld2"; Ā_intrusive)
@@ -265,6 +275,33 @@ p
 gr()
 pgfplotsx()
 
-[:none, :auto, :circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross, :utriangle, :dtriangle, :rtriangle, :ltriangle, :pentagon, :heptagon, :octagon, :star4, :star6, :star7, :star8, :vline, :hline, :+, :x].
-
-figsave(p, "convergence_$filtername"; size = (400, 300))
+[
+    :none,
+    :auto,
+    :circle,
+    :rect,
+    :star5,
+    :diamond,
+    :hexagon,
+    :cross,
+    :xcross,
+    :utriangle,
+    :dtriangle,
+    :rtriangle,
+    :ltriangle,
+    :pentagon,
+    :heptagon,
+    :octagon,
+    :star4,
+    :star6,
+    :star7,
+    :star8,
+    :vline,
+    :hline,
+    :+,
+    :x,
+].figsave(
+    p,
+    "convergence_$filtername";
+    size = (400, 300),
+)

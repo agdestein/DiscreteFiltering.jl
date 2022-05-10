@@ -1,15 +1,17 @@
-"""Exact unfiltered solution"""
+"""
+Exact unfiltered solution
+"""
 function create_data_exact(A, c, ξ, t)
     N = length(ξ)
     nfreq, nsample = size(c)
     K = nfreq ÷ 2
     nt = length(t)
-    e = [exp(2π * im * k * ξ) for ξ ∈ ξ, k ∈ -K:K]
+    e = [exp(2π * im * k * ξ) for ξ ∈ ξ, k ∈ (-K):K]
     u₀ = real.(e * c)
     u = zeros(N, nsample, nt)
     ∂u∂t = zeros(N, nsample, nt)
     for (i, t) ∈ enumerate(t)
-        Et = [exp(-2π * im * k * t) for k ∈ -K:K]
+        Et = [exp(-2π * im * k * t) for k ∈ (-K):K]
         u[:, :, i] = real.(e * (Et .* c))
         # ∂u∂t[:, :, i] = real.(e * (-2π * im .* (-K:K) .* Et .* c))
         # ∂u∂t[:, :, i] = A * real.(e * (Et .* c))
@@ -18,13 +20,15 @@ function create_data_exact(A, c, ξ, t)
     # (; u₀, u, ∂u∂t)
 end
 
-"""Create DNS solution (numerical approximation)"""
+"""
+Create DNS solution (numerical approximation)
+"""
 function create_data_dns(A, c, ξ, t)
     N = length(ξ)
     nfreq, nsample = size(c)
     K = nfreq ÷ 2
     nt = length(t)
-    e = [exp(2π * im * k * ξ) for ξ ∈ ξ, k ∈ -K:K]
+    e = [exp(2π * im * k * ξ) for ξ ∈ ξ, k ∈ (-K):K]
     u₀ = real.(e * c)
     sol = S!(A, u₀, t) #; reltol = 1e-8, abstol = 1e-10)
     u = Array(sol)
@@ -36,7 +40,9 @@ function create_data_dns(A, c, ξ, t)
     # (; u₀, u, ∂u∂t)
 end
 
-"""Create discrete filtered solution from DNS"""
+"""
+Create discrete filtered solution from DNS
+"""
 function create_data_filtered(W, A, dns)
     (; u₀, u) = dns
     # (; u₀, u, ∂u∂t) = dns

@@ -17,16 +17,16 @@ using DiffEqFlux
 using Plots
 
 
-u(c, x, t) = real(sum(c * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
+u(c, x, t) = real(sum(c * exp(2π * im * k * (x - t)) for (k, c) ∈ zip((-K):K, c)))
 ∂u∂t(c, x, t) =
-    real(-2π * im * sum(c * k * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
-ū(Ĝ, c, x, t) = real(sum(
-    c * Ĝ(k, x) * exp(2π * im * k * (x - t))
-    for (k, c) ∈ zip(-K:K, c))
-)
-∂ū∂t(Ĝ, c, x, t) = real(sum(
-    -2π * im * k * c * Ĝ(k, x) * exp(2π * im * k * (x - t))
-    for (k, c) ∈ zip(-K:K, c))
+    real(-2π * im * sum(c * k * exp(2π * im * k * (x - t)) for (k, c) ∈ zip((-K):K, c)))
+ū(Ĝ, c, x, t) =
+    real(sum(c * Ĝ(k, x) * exp(2π * im * k * (x - t)) for (k, c) ∈ zip((-K):K, c)))
+∂ū∂t(Ĝ, c, x, t) = real(
+    sum(
+        -2π * im * k * c * Ĝ(k, x) * exp(2π * im * k * (x - t)) for
+        (k, c) ∈ zip((-K):K, c)
+    ),
 )
 
 # Discretization
@@ -63,8 +63,8 @@ Aᴹ = Matrix(circulant(M, [-1, 1], [1.0, -1.0] / 2Δx))
 K = 50
 
 # e(k, x) = exp(2π * im * k * x)
-e = [exp(2π * im * k * ξ) for ξ ∈ ξ, k ∈ -K:K]
-ē = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
+e = [exp(2π * im * k * ξ) for ξ ∈ ξ, k ∈ (-K):K]
+ē = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ x, k ∈ (-K):K]
 ēquad = W * e
 
 eobs = [real.(e) imag.(e)]
@@ -73,15 +73,15 @@ ēobs = [real.(ē) imag.(ē)]
 Wspec = ēobs * eobs' / (eobs * eobs' + 1e-10I)
 plotmat(Wspec)
 
-plotmat((Rspec = eobs * ēobs' / (ēobs * ēobs' + 1e-10I);); clims = (-20,25))
-plotmat((Rspec = (Wspec'Wspec + 1e-10I) \ Wspec';); clims = (-20,25))
+plotmat((Rspec = eobs * ēobs' / (ēobs * ēobs' + 1e-10I)); clims = (-20, 25))
+plotmat((Rspec = (Wspec'Wspec + 1e-10I) \ Wspec'); clims = (-20, 25))
 plotmat(Rspec)
 
 plotmat(Wspec * Rspec)
 plotmat(log.(abs.(Wspec * Rspec)))
 
 p = plot()
-for (color, i) ∈ enumerate(K+1:K+5)
+for (color, i) ∈ enumerate((K + 1):(K + 5))
     plot!(p, ξ, real.(e[:, i]); color, linestyle = :dash, label = "e$(color-1)")
     plot!(p, x, real.(ē[:, i]); color, label = "ē$(color-1)")
     plot!(p, x, real.(ēquad[:, i]); color, linestyle = :dot, label = "ēquad$(color-1)")
@@ -90,10 +90,10 @@ for (color, i) ∈ enumerate(K+1:K+5)
 end
 p
 
-e = [exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
-ē = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
-efine = [exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
-ēfine = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
+e = [exp(2π * im * k * x) for x ∈ x, k ∈ (-K):K]
+ē = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ x, k ∈ (-K):K]
+efine = [exp(2π * im * k * x) for x ∈ ξfine, k ∈ (-K):K]
+ēfine = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ (-K):K]
 # Φ = e'ē .* Δx
 Φ = efine'ēfine .* Δξfine
 
@@ -112,7 +112,7 @@ plotmat(imag.(Φinv))
 plotmat(abs.(Φinv))
 plotmat(log.(abs.(Φinv)))
 
-Â = -2π * im * Φ * Diagonal(-K:K) * Φinv
+Â = -2π * im * Φ * Diagonal((-K):K) * Φinv
 # Â = -2π * im * Φ * Diagonal(-K:K) / Φ
 Âshift = Â
 Âshift = circshift(Â, (K, K))
@@ -134,7 +134,7 @@ scatter!(eigen(Aᴹ).values)
 scatter!(eigen(Ā_fourier).values)
 
 p = plot()
-for (color, i) ∈ enumerate(K+1:K+5)
+for (color, i) ∈ enumerate((K + 1):(K + 5))
     plot!(p, x, real.(e[:, i]); color, linestyle = :dash, label = "e$(color-1)")
     plot!(p, x, real.(ē[:, i]); color, label = "ē$(color-1)")
     # plot!(p, ξ, real.(efine[:, i]); color, linestyle = :dash, label = "e$(color-1)")
@@ -143,7 +143,8 @@ end
 p
 
 # Create signal
-create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) / (abs(k) + 5)^1.5, -K:K)
+create_signal(K) =
+    map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) / (abs(k) + 5)^1.5, (-K):K)
 # create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) * exp(-5 / 6 * max(abs(k), 5), -K:K)
 # create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) * exp(-0.5 * max(abs(k), 10)), -K:K)
 
@@ -155,9 +156,9 @@ function create_data(ē, c, tstops)
     ū = zeros(M, nsample, nt)
     ∂ū∂t = zeros(M, nsample, nt)
     for (i, t) ∈ enumerate(tstops)
-        Et = [exp(-2π * im * k * t) for k ∈ -K:K]
+        Et = [exp(-2π * im * k * t) for k ∈ (-K):K]
         ū[:, :, i] = real.(ē * (Et .* c))
-        ∂ū∂t[:, :, i] = real.(ē * (-2π * im .* (-K:K) .* Et .* c))
+        ∂ū∂t[:, :, i] = real.(ē * (-2π * im .* ((-K):K) .* Et .* c))
     end
     (; ū₀, ū, ∂ū∂t)
 end
@@ -209,4 +210,3 @@ plotmat(Ā_ls)
 
 plotmat(Ā_fourier)
 plotmat(Ā_ls)
-

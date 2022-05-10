@@ -1,23 +1,7 @@
 using Plots, LaTeXStrings
 
-Plots.gr()
-Plots.pgfplotsx()
-
-function figsave(
-    p, name;
-    savedir = "figures/",
-    suffices = ("pdf", "tikz"),
-    kwargs...
-)
-    for suffix ∈ suffices
-        Plots.savefig(
-            Plots.plot(p; kwargs...),
-            joinpath(savedir, "$name.$suffix"),
-        )
-    end
-end
-
-Plots.gr()
+gr()
+pgfplotsx()
 
 figsave(
     # pplotmat(Aᴹ), "convection/AM"; title = L"\mathbf{A}^{(M)}",
@@ -32,144 +16,218 @@ figsave(
 
 
 # Filter
-p = Plots.plot(ξ, h; xlabel = "x", ylims = (0.0, 0.06), legend = :topright)
+p = plot(
+    ξ, h;
+    xlabel = L"x",
+    ylims = (0.0, 0.05),
+    legend = nothing,
+    # title = L"h(x)",
+)
 
+figsave(p, "filter_width"; size = (400, 300))
+
+# Transfer function
+p = plot(; xlabel = L"x", legend = :bottomright);
+for k ∈ 0:5:25
+    plot!(p, ξ, x -> Ĝ(k, x); label = L"k = %$k")
+end
+p
+
+p = plot(; xlabel = L"k", legend = :bottomleft);
+k = LinRange(0, 50, 1000)
+for x ∈ LinRange(0, 0.5, 6)
+    plot!(p, k, k -> Ĝ(k, x); label = L"x = %$x")
+end
+p
+
+figsave(p, "local_transfer_functions"; size = (400, 300))
+
+p = let
+    x = LinRange(0.0, 1.0, 50)
+    # k = LinRange(0.0, K, 100)
+    k = 0:K
+    surface(
+        k, x, Ĝ.(k', x);
+        zlims = (-0.25, 1),
+        zticks = -0.25:0.25:1,
+        xlabel = L"k",
+        ylabel = L"x",
+        legend = false,
+    )
+end
+
+figsave(p, "transfer_function_top_hat"; size = (400, 300))#, suffices = ("pdf",))
+figsave(p, "transfer_function_gauss"; size = (400, 300))#, suffices = ("pdf",))
 
 # Spectrum
+i = 1
+coeffs = coeffs_train;
 dataset = train;
 k = 0:kmax
-e = abs2.(fft(dataset.u₀[1].(ξ)))[1:kmax+1];
+e = abs2.(fft(dataset.u[i].(ξ, 0.0)))[1:kmax+1];
 e /= e[1];
-ē = abs2.(fft(dataset.ūₕ₀[:, 1]))[1:kmax+1];
+ē = abs2.(fft(dataset.ū₀_data[:, i]))[1:kmax+1];
 ē /= ē[1];
-p = Plots.plot(; xlabel = "k", yscale = :log10, legend = :topright);
-Plots.plot!(p, k, e; label = L"u");
-Plots.plot!(p, k, ē; label = L"\bar{u}");
-Plots.plot!(p, k[5:end], exp.(-5 / 3 .* (k[5:end] .- 5)); linestyle = :dash, label = L"-\frac{5}{3} k");
+p = plot(; xlabel = L"k", yscale = :log10, legend = :topright);
+plot!(p, k, e; label = L"u");
+plot!(p, k, ē; label = L"\bar{u}");
+# plot!(p, k[5:end], exp.(-5 / 3 .* (k[5:end] .- 5)); linestyle = :dash, label = L"-\frac{5}{3} k");
 p
 
-p = Plots.plot(; xlabel = "k", yscale = :log10, legend = :topright,
+c = c_train
+p = plot(;
+    xlabel = L"k",
+    yscale = :log10,
+    legend = false,
+    # legend = :topright,
+    # legend_font_halign = :left,
     # title = "e(k)",
 );
-for i = 1:5
-    Plots.plot!(p, 0:kmax, dataset.c[i]; label = "e(k)", linestyle = :dash)
+for i = 1:3
+    scatter!(p, -K:K, abs.(c[:, i]); label = "Unfiltered $i", color = i, marker = :d)
+    scatter!(p, -K:K, abs.(Φ * c[:, i]); label = "Filtered $i", color = i)
 end
 p
+
+figsave(p, "convection/spectra"; size = (400, 300))#, suffices = ("pdf",))
 
 # Filtered and unfiltered solutions
-fig = Figure();
-ax = Axis(fig[1, 1]; xlabel = "x", legend = false);
+p = plot(;
+    xlabel = L"x",
+    legend = false,
+    # title = "Filtered and unfiltered signals",
+);
 for i = 1:3
-    lines!(ax, ξ, train.u₀[i]; linestyle = :dash)
-    lines!(ax, ξ, train.ū₀[i]; color = Cycled(i))
+    # plot!(p, ξ, train.u[i].(ξ, 0.0); linestyle = :dash, color = i)
+    # plot!(p, ξ, train.ū[i].(ξ, 0.0); color = i)
+    plot!(p, ξ, ξ -> u(c_train[:, i], ξ, 0.0); linestyle = :dash, color = i)
+    plot!(p, ξ, ξ -> ū(c_train[:, i], ξ, 0.0); color = i)
+    # scatter!(p, x, train.ū[i].(x, 0.0); color = i)
 end
-fig
+p
 
+figsave(p, "initial_conditions"; size = (400, 300))#, suffices = ("pdf",))
 
 # Superposition
-dataset = test;
-i = 8
-p = Plots.plot(;
-    xlims = (a, b),
-    xlabel = L"x",
-    legend = :topright
+c, dataset = c_test, test;
+i = 1
+p = plot(;
+    xlims = (0, 1),
+    xlabel = L"x - t",
+    # xlabel = L"x - t \pmod 1",
+    legend = :topright,
+    legend_font_halign = :left,
     # title = "ū(x+t, t)",
 );
-Plots.plot!(p, ξ, dataset.u₀[i].(ξ); label = L"u(x, 0)", linestyle = :dash);
+# plot!(p, ξ, dataset.u[i].(ξ, 0.0); label = L"u(x, 0)", linestyle = :dash);
+plot!(p, ξ, x -> u(c[:, i], x, 0.0); label = L"u(x, 0)", linestyle = :dash);
 for (j, t) ∈ enumerate(LinRange(0, T / 2, 3))
-    Plots.plot!(p, ξ, dataset.ū(t)[i].(ξ .+ t);
+    plot!(
+        # p, ξ, dataset.ū[i].(ξ .+ t, t);
+        p, ξ, x -> ū(c[:, i], x .+ t, t);
         color = j,
-        label = L"t = %$t"
-        # label = L"\bar{u}(x, %$t)",
+        # label = L"t = %$t"
+        label = L"\bar{u}(x, %$t)",
     )
 end
 p
 
-figsave(p, "convection/superposed"; size = (400, 300))
-
+figsave(p, "superposed"; size = (400, 300))
 
 # Spectra
-dataset = test;
-i = 8
-k = 0:kmax
-p = Plots.plot(;
-    # xlims = (a, b),
+c, dataset = c_test, test;
+i = 1
+k = -K:K
+p = plot(;
+    # xlims = (0, 1),
     xlabel = L"k",
     legend = :topright,
+    legend_font_halign = :left,
     # title = "ū(x+t, t)",
-    yscale = :log10
+    yscale = :log10,
+    yticks = 10.0 .^ (-5:0),
 );
-Plots.plot!(p, k, abs.(fft(dataset.u(0.0)[i].(ξ))[1:kmax+1]); label =
-    L"\hat{u}(k, 0)", linestyle = :dash);
+scatter!(
+    p, k, abs.(c[:, i]);
+    # label = L"\hat{u}(k, 0)",
+    label = L"u(x, 0)",
+    marker = :d,
+);
 for (j, t) ∈ enumerate(LinRange(0, T / 2, 3))
-    Plots.plot!(
-        p, k, abs.(fft(dataset.ū(t)[i].(ξ))[1:kmax+1]);
+    Et = [exp(-2π * im * k * t) for k ∈ -K:K]
+    scatter!(
+        p, k, abs.(Φ * (Et .* c[:, i]));
         color = j,
-        label = L"\hat{\bar{u}}(k, %$t)"
-        # label = L"\bar{u}(x, %$t)",
+        # marker = :c,
+        # label = L"\hat{\bar{u}}(k, %$t)"
+        label = L"\bar{u}(x, %$t)",
     )
 end
 p
 
-figsave(p, "convection/superposed_spectra"; size = (400, 300))
+figsave(p, "superposed_spectra"; size = (400, 300))
 
 # Plot prediction at T/2
-iplot = 1:5
-y⁻ = minimum(train.ūₕ₀[:, iplot])
-y⁺ = maximum(train.ūₕ₀[:, iplot])
+t = T / 2
+c, dataset = c_test, test;
+iplot = 1:3
+y⁻ = minimum(dataset.ū₀[:, iplot])
+y⁺ = maximum(dataset.ū₀[:, iplot])
 Δy = y⁺ - y⁻
-p = Plots.plot(xlabel = "\$x\$", legend = false, xlims = (a, b));
+p = plot(xlabel = "\$x\$", legend = false, xlims = (0, 1));
 for (ii, i) ∈ enumerate(iplot)
-    Plots.plot!(p, ξ, train.ū(T)[i].(ξ); color = ii)
+    plot!(p, ξ, x -> ū(c[:, i], x, t); color = ii)
     # Ause = Aᴹ
-    Ause = WAR
-    # Ause = Ā_ls
+    # Ause = WAR
+    Ause = Ā_ls
+    # Ause = Ā_fourier
     # Ause = Ā
-    Plots.scatter!(p, x, S(Ause, train.ūₕ₀[:, i], T);
-        markeralpha = 0.5, markersize = 3, label = "i = $i, fit", color = ii)
+    scatter!(
+        p, x, S(Ause, dataset.ū₀[:, i], [t])[end];
+        markeralpha = 0.5, markersize = 3, label = "i = $i, fit", color = ii,
+    )
 end
 p
 
-figsave(p, "convection/initial"; size = (400, 300))
-figsave(p, "convection/final"; size = (400, 300))
+figsave(p, "initial"; size = (400, 300))
+figsave(p, "final"; size = (400, 300))
 
 # Error evolution
-t₀, t₁ = extrema(tstops)
-data_exact(set) = t -> mapreduce(u -> u.(x), hcat, set.ū(t))
-tplot = 10 .^ LinRange(-2, 2, 500)
-# tplot = LinRange(0, 20T, 200)[2:end]
-# train_exact = data_exact(train).(tplot)
-test_exact = data_exact(test).(tplot)
-eAᴹ = relerrs(Aᴹ, test.ūₕ₀, test_exact, tplot; abstol = 1e-10, reltol = 1e-8);
-# eAᴹ_left = relerrs(Aᴹ_left, test.ūₕ₀, test_exact, tplot; abstol = 1e-10, reltol = 1e-8);
-eWAR = relerrs(WAR, test.ūₕ₀, test_exact, tplot; abstol = 1e-10, reltol = 1e-8);
-eĀ = relerrs(Ā, test.ūₕ₀, test_exact, tplot; abstol = 1e-10, reltol = 1e-8);
-eĀ_ls = relerrs(Ā_ls, test.ūₕ₀, test_exact, tplot; abstol = 1e-10, reltol = 1e-8);
+c_long = reduce(hcat, (create_signal(K) for _ = 1:20))
+t_long = 10 .^ LinRange(-2, 2, 51);
+dns_long = create_data_dns(Aᴺ, c_long, ξ, t_long)
+# dns_long = create_data_exact(Aᴺ, c_test, ξ, t_long)
+long = create_data_filtered(W, Aᴺ, dns_long);
+e_long_Aᴹ = relerrs(Aᴹ, long.ū₀, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
+e_long_WAR  = relerrs(WAR, long.ū₀, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
+e_long_Ā_ls = relerrs(Ā_ls, long.ū₀, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
+e_long_Ā_intrusive = relerrs(Ā_intrusive, long.ū₀, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
+# e_long_Ā_fourier = relerrs(Ā_fourier, long.ū₀, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
 
-p = Plots.plot(;
-    xlabel = L"t / T",
+t₀, t₁ = extrema(t_train)
+p = plot(;
+    xlabel = L"t",
     # ylabel = "Mean relative error",
     xscale = :log10,
     yscale = :log10,
     legend = :bottomright,
-    xticks = 10.0 .^ (-2:2),
-    yticks = 10.0 .^ (-5:0),
-    xlims = extrema(tplot),
-    ylims = (5e-6, 2.0),
+    # xticks = 10.0 .^ (-2:2),
+    yticks = 10.0 .^ (-6:0),
+    xlims = extrema(t_long),
+    ylims = (5e-5, 2.0e0),
     legend_font_halign = :left,
     minorgrid = true
 );
-Plots.vspan!(p, [t₀, t₁]; fillalpha = 0.1, label = "Training interval");
-# Plots.vline!(p, tstops; label = "Training snapshots", linestyle = :dash);
-Plots.plot!(p, tplot, eAᴹ; label = L"\mathbf{A}^{(M)}");
-# Plots.plot!(p, tplot, eAᴹ_left; label = L"\mathbf{A}_l^{(M)}");
-Plots.plot!(p, tplot, eWAR; label = L"\mathbf{W} \mathbf{A}^{(N)} \mathbf{R}");
-Plots.plot!(p, tplot, eĀ; label = L"$\bar{\mathbf{A}}$, intrusive");
-Plots.plot!(p, tplot, eĀ_ls; label = L"$\bar{\mathbf{A}}$, least squares");
-# Plots.plot!(p, tplot, 1e-3 .* tplot .^ 1)
+vspan!(p, [t₀, t₁]; fillalpha = 0.1, label = "Training interval");
+# vline!(p, t_train; label = "Training snapshots", linestyle = :dash);
+plot!(p, t_long, e_long_Aᴹ; label = L"\mathbf{A}^{(M)}");
+plot!(p, t_long, e_long_WAR; label = L"\mathbf{W} \mathbf{A}^{(N)} \mathbf{R}");
+plot!(p, t_long, e_long_Ā_ls; label = L"$\bar{\mathbf{A}}$, least squares");
+plot!(p, t_long, e_long_Ā_intrusive; label = L"$\bar{\mathbf{A}}$, intrusive");
+# plot!(p, t_long, e_long_Ā_fourier; label = L"$\bar{\mathbf{A}}$, Fourier");
 p
 
-figsave(p, "convection/comparison"; size = (400, 300))
+figsave(p, "comparison_$filtername"; size = (400, 300))
 
 
 # Energy evolution
@@ -178,28 +236,29 @@ i = 7
 tplot = LinRange(0, tnew, 1000)
 saveat = LinRange(0, tnew, 2000)
 # sol = S_mem(Aᴹ, train.ūₕ₀[:, i], saveat)
-sol = S_mem(WAR, train.ūₕ₀[:, i], saveat)
-# sol = S_mem(Ā, train.ūₕ₀[:, i], saveat)
-# sol = S_mem(Ā_ls, train.ūₕ₀[:, i], saveat)
-E(t) = 1 / 2M * sum(abs2, train.u(t)[i].(x))
-Ē(t) = 1 / 2M * sum(apply_filter(x -> train.u(t)[i](x)^2, ℱ, domain).(x))
+sol = S(WAR, train.ū₀_data[:, i], saveat)
+# sol = S_mem(Ā, train.ū₀_data[:, i], saveat)
+# sol = S_mem(Ā_ls, train.ū₀_data[:, i], saveat)
+E(t) = 1 / 2M * sum(abs2, train.u[i].(x, t))
+Ē(t) = 1 / 2M * mapreduce(apply_filter(x -> train.u[i](x, t)^2, ℱ, domain), +, x)
 Eu = E.(tplot)
 Eū = [1 / 2M * sum(abs2, sol(t)) for t ∈ tplot]
-Eup = [1 / 2M * sum(abs2, train.u(t)[i].(x) .- sol(t)) for t ∈ tplot]
+Eup = [1 / 2M * sum(abs2, train.u[i].(x, t) .- sol(t)) for t ∈ tplot]
 
-p = Plots.plot(; xlabel = L"t", legend = :topright);
-Plots.plot!(p, tplot, E; label = L"E(u)");
-Plots.plot!(p, tplot, Eū; label = L"E(\bar{u})");
-Plots.plot!(p, tplot, Eū + Eup; label = L"E(\bar{u}) + E(u')");
+p = plot(; xlabel = L"t", legend_font_halign = :left, legend = :topright);
+plot!(p, tplot, E; label = L"E(u)");
+plot!(p, tplot, Eū; label = L"E(\bar{u})");
+plot!(p, tplot, Eū + Eup; label = L"E(\bar{u}) + E(u')");
 p
 
-figsave(p, "convection/energy"; size = (400, 300))
+figsave(p, "energy"; size = (400, 300))
 
+scatter(x, sin.(25 .*x))
 
 ##
 # d = train;
 d = test;
-p1 = Plots.plot(; xlims = (a, b), xlabel = "x", title = "Solution (test data)");
+p1 = plot(; xlims = (a, b), xlabel = "x", title = "Solution (test data)");
 j = 0
 k = 9
 i = 6
@@ -207,19 +266,19 @@ for k = [1, 3, 6, 9]
     # for i = 1:3
     j += 1
     lab = L"\bar{u}(%$(tstops[k]))"
-    Plots.scatter!(x, d.ūₕ[k][:, i];
+    scatter!(x, d.ūₕ[k][:, i];
         # label = "$lab exact",
         label = nothing,
         color = j,
         markeralpha = 0.5
     )
-    Plots.plot!(x, S(Aᴹ, d.ūₕ₀[:, i], tstops[k]); linestyle = :dot, label = nothing, color = j)
-    Plots.plot!(x, S(Ā, d.ūₕ₀[:, i], tstops[k]); label = lab, color = j)
+    plot!(x, S(Aᴹ, d.ū₀_data[:, i], [tstops[k]])[end]; linestyle = :dot, label = nothing, color = j)
+    plot!(x, S(Ā, d.ū₀_data[:, i], [tstops[k]])[end]; label = lab, color = j)
 end
-Plots.plot(p1)
+plot(p1)
 
-p2 = Plots.plot(; xlims = (a, b), xlabel = L"x", title = "Filter width");
-xline(x, y) = Plots.plot!(x, [y, y]; label = nothing, color = 1);
+p2 = plot(; xlims = (a, b), xlabel = L"x", title = "Filter width");
+xline(x, y) = plot!(x, [y, y]; label = nothing, color = 1);
 for (i, x) ∈ enumerate(x)
     hᵢ = h(x)
     x⁻ = x - hᵢ
@@ -233,8 +292,8 @@ for (i, x) ∈ enumerate(x)
     else
         xline([x⁻, x⁺], i)
     end
-    Plots.scatter!([x], [i]; label = nothing, color = 1)
+    scatter!([x], [i]; label = nothing, color = 1)
 end
-Plots.plot(p2)
+plot(p2)
 
-Plots.plot(p1, p2; layout = (2, 1))
+plot(p1, p2; layout = (2, 1))

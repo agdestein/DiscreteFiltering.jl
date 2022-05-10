@@ -1,0 +1,4 @@
+[deps]
+DiscreteFiltering = "34a6a658-598a-40e4-ac4c-64bca795fe02"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+PGFPlotsX = "8314cec4-20b6-5062-9cdb-752b83310925"

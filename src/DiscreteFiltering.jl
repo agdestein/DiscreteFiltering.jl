@@ -1,80 +1,51 @@
 "Discrete filtering toolbox"
 module DiscreteFiltering
 
-using ApproxFun: Fun, chebyshevt, integrate, Interval, (..)
-using ForwardDiff
-using IntervalSets: ±
+using DiffEqFlux
 using LinearAlgebra
-using Makie: Makie
-using MLJLinearModels
-using OrdinaryDiffEq: OrdinaryDiffEq
-using OrdinaryDiffEq: ODEFunction, ODEProblem, QNDF, RK4, DiffEqArrayOperator, LinearExponential
-using Parameters
-using Plots: Plots
+using OrdinaryDiffEq
+using Plots
 using SparseArrays
-using NonNegLeastSquares
 
-# Domain
-include("domain/domain.jl")
-include("domain/get_npoint.jl")
-include("domain/discretize.jl")
+# ODE right hand side
+f(u, A, t) = A * u
+f!(du, u, A, t) = mul!(du, A, u)
 
-# Filter
-include("filter/filter.jl")
-include("filter/apply_filter.jl")
-include("filter/apply_filter_int.jl")
-include("filter/apply_filter_extend.jl")
+"""
+    S(A, u, t; kwargs...)
 
-# Matrix assembly
-include("matrices/advection_matrix.jl")
-include("matrices/diffusion_matrix.jl")
-include("matrices/interpolation_matrix.jl")
-include("matrices/filter_matrix.jl")
-include("matrices/filter_matrix_meshwidth.jl")
-include("matrices/reconstruction_matrix.jl")
-include("matrices/reconstruction_matrix_meshwidth.jl")
-include("matrices/get_W_R.jl")
-include("matrices/fit_Cbar.jl")
+ODE solver for given operator and IC"""
+function S(A, u, t; kwargs...)
+    problem = ODEProblem(ODEFunction(f), u, (0.0, t[end]), A)
+    solve(problem, Tsit5(); saveat = t, kwargs...)
+end
 
-# Equations
-include("equations/equations.jl")
-include("equations/solve.jl")
-include("equations/solve_adbc.jl")
+"""
+    S!(A, u, t; kwargs...)
+
+ODE solver for given operator and IC (mutating form)"""
+function S!(A, u, t; kwargs...)
+    problem = ODEProblem(ODEFunction(f!), u, (0.0, t[end]), A)
+    solve(problem, Tsit5(); saveat = t, kwargs...)
+end
+
+include("intrusive.jl")
+include("create_data.jl")
+include("errors.jl")
 
 # Utils
 include("utils/circulant.jl")
-include("utils/ridge.jl")
-include("utils/sum_of_sines.jl")
 include("utils/plotmat.jl")
+include("utils/figsave.jl")
 
-# Domain
-export ClosedIntervalDomain, PeriodicIntervalDomain, discretize, get_npoint
-
-# Filter
-export IdentityFilter
-export TopHatFilter
-export ConvolutionalFilter
-export GaussianFilter
-export apply_filter
-export apply_filter_int
-export apply_filter_extend
-
-# Matrix assembly
-export advection_matrix
-export diffusion_matrix
-export filter_matrix
-export filter_matrix_meshwidth
-export reconstruction_matrix
-export reconstruction_matrix_meshwidth
-export get_W_R
-export fit_Cbar, fit_Cbar_approx
-
-# Equations
-export AdvectionEquation, DiffusionEquation, BurgersEquation, solve, solve_adbc
+export S, S!
+export create_loss, fit_intrusive
+export relerrs, relerr
+export create_data_exact, create_data_dns, create_data_filtered
 
 # Utils
 export circulant
 export sum_of_sines
-export pplotmat, mplotmat
+export plotmat, figsave
 
 end

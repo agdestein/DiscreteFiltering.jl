@@ -17,15 +17,15 @@ using DiffEqFlux
 using Plots
 
 
-u(c, x, t) = real(sum(c * exp(2π * im * k * (x - t)) for (k, c) ∈ zip((-K):K, c)))
+u(c, x, t) = real(sum(c * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
 ∂u∂t(c, x, t) =
-    real(-2π * im * sum(c * k * exp(2π * im * k * (x - t)) for (k, c) ∈ zip((-K):K, c)))
+    real(-2π * im * sum(c * k * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
 ū(Ĝ, c, x, t) =
-    real(sum(c * Ĝ(k, x) * exp(2π * im * k * (x - t)) for (k, c) ∈ zip((-K):K, c)))
+    real(sum(c * Ĝ(k, x) * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
 ∂ū∂t(Ĝ, c, x, t) = real(
     sum(
         -2π * im * k * c * Ĝ(k, x) * exp(2π * im * k * (x - t)) for
-        (k, c) ∈ zip((-K):K, c)
+        (k, c) ∈ zip(-K:K, c)
     ),
 )
 
@@ -51,7 +51,7 @@ Ĝ(k, x) = k == 0 ? 1.0 : sin(2π * k * h(x)) / (2π * k * h(x))
 
 # Gaussian filter
 G(x, ξ) = √(6 / π) / h(x) * exp(-6(x - ξ)^2 / h(x)^2)
-Ĝ(k, x) = exp(-4π^2 / 3 * k^2 * h(x)^2)
+Ĝ(k, x) = exp(-π^2 / 6 * k^2 * h(x)^2)
 
 # DNS operator
 Aᴺ = circulant(N, [-1, 1], [1.0, -1.0] / 2Δξ)
@@ -81,7 +81,7 @@ plotmat(Wspec * Rspec)
 plotmat(log.(abs.(Wspec * Rspec)))
 
 p = plot()
-for (color, i) ∈ enumerate((K + 1):(K + 5))
+for (color, i) ∈ enumerate((K+1):(K+5))
     plot!(p, ξ, real.(e[:, i]); color, linestyle = :dash, label = "e$(color-1)")
     plot!(p, x, real.(ē[:, i]); color, label = "ē$(color-1)")
     plot!(p, x, real.(ēquad[:, i]); color, linestyle = :dot, label = "ēquad$(color-1)")
@@ -134,7 +134,7 @@ scatter!(eigen(Aᴹ).values)
 scatter!(eigen(Ā_fourier).values)
 
 p = plot()
-for (color, i) ∈ enumerate((K + 1):(K + 5))
+for (color, i) ∈ enumerate((K+1):(K+5))
     plot!(p, x, real.(e[:, i]); color, linestyle = :dash, label = "e$(color-1)")
     plot!(p, x, real.(ē[:, i]); color, label = "ē$(color-1)")
     # plot!(p, ξ, real.(efine[:, i]); color, linestyle = :dash, label = "e$(color-1)")

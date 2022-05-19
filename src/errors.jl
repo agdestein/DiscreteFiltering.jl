@@ -1,8 +1,11 @@
 """
-Relative errors
+    relerrs(A, uₜ, t; kwargs...)
+
+Time dependent relative errors, averaged over data samples.
 """
-function relerrs(A, u₀, uₜ, t; kwargs...)
-    nsample = size(u₀, 2)
+function relerrs(A, uₜ, t; kwargs...)
+    nsample = size(uₜ, 2)
+    u₀ = uₜ[:, :, 1]
     sol = S!(A, u₀, t; kwargs...)
     errs = zeros(length(t))
     for i ∈ eachindex(t)
@@ -15,6 +18,8 @@ function relerrs(A, u₀, uₜ, t; kwargs...)
 end
 
 """
-Relative errors (time averaged)
+    relerr(A, uₜ, t; kwargs...)
+
+Relative error, averaged over time and data samples.
 """
-relerr(A, u₀, uₜ, t; kwargs...) = sum(relerrs(A, u₀, uₜ, t; kwargs...)) / length(t)
+relerr(A, uₜ, t; kwargs...) = sum(relerrs(A, uₜ, t; kwargs...)) / length(t)

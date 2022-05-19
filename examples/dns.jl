@@ -13,12 +13,19 @@ using LinearAlgebra
 using SparseArrays
 using Plots
 using LaTeXStrings
+using Random
 
 # Create signal
-create_signal(K) =
-    map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) / (abs(k) + 5)^1.5, (-K):K)
+# create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) / (abs(k) + 5)^1.5, -K:K)
 # create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) * exp(-5 / 6 * max(abs(k), 5), -K:K)
 # create_signal(K) = map(k -> (1 + 0.2 * randn()) * exp(2π * im * rand()) * exp(-0.5 * max(abs(k), 10)), -K:K)
+create_magnitude(k) = (1 + 0.2 * randn()) / (5 + abs(k))^1.5
+function create_signal(K)
+    c₀ = create_magnitude(0)
+    c₊ = map(k -> create_magnitude(k) * exp(2π * im * rand()), 1:K)
+    c₋ = reverse(conj.(c₊))
+    [c₋; c₀; c₊]
+end
 
 # Filter width
 h₀ = 1 / 30
@@ -27,36 +34,38 @@ h(x) = (1 + 1 / 3 * sin(2π * x)) * h₀
 dh(x) = 2π / 3 * cos(2π * x) * h₀
 
 # Top-hat filter
-filtername = "top_hat"
-G(x, ξ) = (abs(x - ξ) ≤ h(x)) / 2h(x)
-Ĝ(k, x) = k == 0 ? 1.0 : sin(2π * k * h(x)) / (2π * k * h(x))
+tophat = create_tophat(h)
+F = tophat
 
 # Gaussian filter
-filtername = "gaussian"
-G(x, ξ) = √(6 / π) / h(x) * exp(-6(x - ξ)^2 / h(x)^2)
-Ĝ(k, x) = exp(-4π^2 / 3 * k^2 * h(x)^2)
+gaussian = create_gaussian(h)
+F = gaussian
 
 # Continuous data
 K = 50
 ntrain = 1000
 ntest = 100
 
+Random.seed!(0)
 c_train = reduce(hcat, (create_signal(K) for _ = 1:ntrain))
 c_test = reduce(hcat, (create_signal(K) for _ = 1:ntest))
 
-jldsave("output/coefficients.jld2"; c_train, c_test)
+# jldsave("output/coefficients.jld2"; c_train, c_test)
 c_train, c_test = load("output/coefficients.jld2", "c_train", "c_test")
 
 # Fine discretization
 Nfine = 10000
 ξfine = LinRange(0, 1, Nfine + 1)[2:end]
 Δξfine = 1 / Nfine
-efine = [exp(2π * im * k * x) for x ∈ ξfine, k ∈ (-K):K]
-ēfine = [Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ (-K):K]
+efine = [exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
+ēfine = [F.Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
 Φ = efine'ēfine .* Δξfine
 # Φinv = inv(Φ)
 Φinv = (Φ'Φ + 1e-8I) \ Φ'
-Â = -2π * im * Φ * Diagonal((-K):K) * Φinv
+Â = -2π * im * Φ * Diagonal(-K:K) * Φinv
+
+Φtophat = Φ
+Φgauss = Φ
 
 # DNS discretization
 N = 1000
@@ -66,8 +75,8 @@ Aᴺ = circulant(N, [-1, 1], [1.0, -1.0] / 2Δξ)
 
 # Time (T: one period)
 T = 1.0
-t_train = LinRange(0, 1T, 51)[2:end]
-t_test = LinRange(0, 2T, 21)[2:end]
+t_train = LinRange(0, 1T, 51)
+t_test = LinRange(0, 2T, 21)
 
 # DNS solution: approximate
 dns_train = create_data_dns(Aᴺ, c_train, ξ, t_train)
@@ -82,9 +91,9 @@ MM = round.(Int, 10 .^ LinRange(1, log10(500), 11))
 # MM = [10, 50, 100, 150, 200, 250, 300]
 eAᴹ = zeros(length(MM))
 eĀ_classic = zeros(length(MM))
-eWAR = zeros(length(MM))
+eĀ_exp = zeros(length(MM))
 eĀ_ls = zeros(length(MM))
-eĀ_intrusive = zeros(length(MM))
+eĀ_int = zeros(length(MM))
 eĀ_fourier = zeros(length(MM))
 MM
 
@@ -104,10 +113,15 @@ i, M = 9, 229
 i, M = 10, 338
 i, M = 11, 500
 
+i, M = 0, 100
+
 # for (i, M) ∈ enumerate(MM)
 for (i, M) ∈ collect(enumerate(MM))[1:8]
 
     gr()
+
+    F = tophat
+    F = gaussian
 
     # LES Discretization
     x = LinRange(0, 1, M + 1)[2:end]
@@ -115,19 +129,15 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     Aᴹ = circulant(M, [-1, 1], [1.0, -1.0] / 2Δx)
     Aᴹ_mat = Matrix(Aᴹ)
 
-    # # Filter
-    # h₀ = 3Δx
-    # # h(x) = h₀ / 2 * (1 + 3 * sin(π * x) * exp(-2x^2))
-    # h(x) = h₀ * (1 + 1 / 3 * sin(2π * x))
-    # # G(x, ξ) = abs(x - ξ) ≤ h(x)
-    # G(x, ξ) = exp(-6(x - ξ)^2 / h(x)^2)
-
-    W = [mapreduce(ℓ -> G(x, ξ + ℓ), +, (-1, 0, 1)) for x in x, ξ ∈ ξ]
-    W = W ./ sum(W; dims = 2)
-    W[abs.(W) .< 1e-14] .= 0
-    W = sparse(W)
-    plotmat(W)
+    W = filter_matrix(F, x, ξ)
+    plotmat(W; aspect_ratio = N / M)
     # plotmat(log.(W))
+
+    W_tophat = filter_matrix(tophat, x, ξ)
+    W_gaussian = filter_matrix(gaussian, x, ξ)
+
+    plotmat(W_tophat; aspect_ratio = N / M)
+    plotmat(W_gaussian; aspect_ratio = N / M)
 
     train = create_data_filtered(W, Aᴺ, dns_train)
     test = create_data_filtered(W, Aᴺ, dns_test)
@@ -135,13 +145,17 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     # Fit non-intrusively using least squares on snapshots matrices
     Ū = reshape(train.ū, M, :)
     ∂Ū∂t = reshape(train.∂ū∂t, M, :)
-    λ = 1e-3
+    λ = 1e-5
     # Ā_ls = (∂Ū∂t * Ū') / (Ū * Ū')
     # Ā_ls = ∂Ū∂t * Ū' / (Ū * Ū' + λ * I)
     Ā_ls = (∂Ū∂t * Ū' + λ * Aᴹ) / (Ū * Ū' + λ * I)
     plotmat(Ā_ls)
+    # plotmat(Ā_ls - Aᴹ)
 
-    # λ = 1e-10 * M
+    Ā_ls_tophat = Ā_ls
+    Ā_ls_gaussian = Ā_ls
+
+    # λ = 1e-8 * M
     # Wmat = Matrix(W)
     # R = (W'W + λ * I) \ Wmat'
     # # R =  Wmat' / (W*W' + λ * I)
@@ -149,14 +163,21 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
 
     U = reshape(dns_train.u, N, :)
     # λ = 1e-8 * size(U, 2)
-    λ = 1e-6
+    λ = 1e-8
     R = (U * Ū') / (Ū * Ū' + λ * I)
-    plotmat(R)
+    plotmat(R; aspect_ratio = M / N)
 
-    WAR = W * Aᴺ * R
-    plotmat(WAR)
+    Rtophat = R
+    Rgauss = R
 
-    e = [exp(2π * im * k * x) for x ∈ x, k ∈ (-K):K]
+    Ā_exp = W * Aᴺ * R
+    plotmat(Ā_exp)
+    # plotmat(Ā_exp - Aᴹ)
+
+    Ā_exp_tophat = Ā_exp
+    Ā_exp_gaussian = Ā_exp
+
+    e = [exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
     Ā_fourier = real.(e * Â * e') .* Δx
     plotmat(Ā_fourier)
 
@@ -164,7 +185,7 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     Ā_classic = Aᴹ + Diagonal(1 / 3 .* h.(x) .* dh.(x)) * D
     plotmat(Ā_classic)
 
-    # loss = create_loss(train.ū₀, train.ū, t_train, Aᴹ; λ = 1e-10)
+    # loss = create_loss(train.ū, t_train, Aᴹ; λ = 1e-10)
     # loss(Aᴹ)
     # loss(WAR)
     # plotmat(first(Zygote.gradient(loss, Matrix(Aᴹ))))
@@ -173,66 +194,63 @@ for (i, M) ∈ collect(enumerate(MM))[1:8]
     # Ā_intrusive = result_ode.u
     # plotmat(Ā_intrusive)
 
-    Ā_intrusive = Aᴹ_mat
+    Ā_int = Aᴹ_mat
 
-    # create_testloss(ū₀, ū, t) = (A -> relerr(A, ū₀, ū, t; abstol = 1e-10, reltol = 1e-8))
-    create_testloss(ū₀, ū, t) = (A -> relerr(A, ū₀, ū, t))
+    # create_testloss(ū, t) = (A -> relerr(A, ū, t; abstol = 1e-10, reltol = 1e-8))
+    create_testloss(ū, t) = (A -> relerr(A, ū, t))
 
-    Ā_intrusive = fit_intrusive(
+    Ā_int = fit_intrusive(
         Aᴹ_mat,
-        train.ū₀,
         train.ū,
         t_train;
         α = 0.001,
         β₁ = 0.9,
         β₂ = 0.999,
         ϵ = 1e-8,
-        λ = 1e-10,
-        nbatch = 100,
-        niter = 500,
+        λ = 1e-2,
+        nbatch = 20,
+        niter = 5000,
         nepoch = 1,
-        initial = Ā_intrusive,
+        initial = Ā_int,
         # testloss = create_loss(test.ū₀[:, 1:10], test.ū[:, 1:10, :], t_test, Aᴹ_mat; λ = 0),
-        testloss = create_testloss(test.ū₀[:, 1:10], test.ū[:, 1:10, :], t_test),
-        ntestloss = 20,
+        testloss = create_testloss(test.ū[:, 1:10, :], t_test),
+        ntestloss = 5,
     )
 
-    plotmat(Ā_intrusive - Aᴹ)
+    plotmat(Ā_int - Aᴹ)
+    plotmat(Ā_int)
 
-    eAᴹ[i] = relerr(Aᴹ, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eAᴹ[i] = relerr(Aᴹ, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
     # eĀ_classic[i] = relerr(Ā_classic, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    eWAR[i] = relerr(WAR, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    eĀ_ls[i] = relerr(Ā_ls, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    eĀ_intrusive[i] =
-        relerr(Ā_intrusive, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    # eĀ_fourier[i] = relerr(Ā_fourier, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eĀ_exp[i] = relerr(Ā_exp, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eĀ_ls[i] = relerr(Ā_ls, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eĀ_int[i] = relerr(Ā_int, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    # eĀ_fourier[i] = relerr(Ā_fourier, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
     @show(
         i,
         M,
         eAᴹ[i],
         # eĀ_classic[i],
-        eWAR[i],
+        eĀ_exp[i],
         eĀ_ls[i],
-        eĀ_intrusive[i],
+        eĀ_int[i],
         # eĀ_fourier[i],
-    )
+    );
 end
 
-jldsave("output/$filtername/A_intrusive_$M.jld2"; Ā_intrusive)
+# jldsave("output/$filtername/A_intrusive_$M.jld2"; Ā_intrusive)
 Ā_intrusive = load("output/$filtername/A_intrusive_$M.jld2", "Ā_intrusive")
 
-# aa = jldopen("output/$filtername/errors.jld2", "r")
-
-jldsave(
-    "output/$filtername/errors.jld2";
-    eAᴹ,
-    eĀ_classic,
-    eWAR,
-    eĀ_ls,
-    eĀ_intrusive,
-    eĀ_fourier,
-)
+# jldsave(
+#     "output/$filtername/errors.jld2";
+#     eAᴹ,
+#     eĀ_classic,
+#     eWAR,
+#     eĀ_ls,
+#     eĀ_intrusive,
+#     eĀ_fourier
+# )
 
 (
     eAᴹ,
@@ -298,8 +316,6 @@ pgfplotsx()
     :hline,
     :+,
     :x,
-].figsave(
-    p,
-    "convergence_$filtername";
-    size = (400, 300),
-)
+]
+
+figsave(p, "convergence_$filtername"; size = (400, 300))

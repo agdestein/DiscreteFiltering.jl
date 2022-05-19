@@ -14,25 +14,26 @@ f(u, A, t) = A * u
 f!(du, u, A, t) = mul!(du, A, u)
 
 """
-    S(A, u, t; kwargs...)
+    S(A, u₀, t; kwargs...)
 
-ODE solver for given operator and IC.
+Solve ODE for given operator and IC. This form is differentiable.
 """
-function S(A, u, t; kwargs...)
-    problem = ODEProblem(ODEFunction(f), u, (0.0, t[end]), A)
+function S(A, u₀, t; kwargs...)
+    problem = ODEProblem(ODEFunction(f), u₀, extrema(t), A)
     solve(problem, Tsit5(); saveat = t, kwargs...)
 end
 
 """
     S!(A, u, t; kwargs...)
 
-ODE solver for given operator and IC (mutating form).
+Solve ODE for given operator and IC (mutating form, not differentiable).
 """
-function S!(A, u, t; kwargs...)
-    problem = ODEProblem(ODEFunction(f!), u, (0.0, t[end]), A)
+function S!(A, u₀, t; kwargs...)
+    problem = ODEProblem(ODEFunction(f!), u₀, extrema(t), A)
     solve(problem, Tsit5(); saveat = t, kwargs...)
 end
 
+include("filters.jl")
 include("intrusive.jl")
 include("create_data.jl")
 include("errors.jl")
@@ -42,6 +43,7 @@ include("utils/circulant.jl")
 include("utils/plotmat.jl")
 include("utils/figsave.jl")
 
+export create_tophat, create_gaussian, filter_matrix
 export S, S!
 export create_loss, fit_intrusive
 export relerrs, relerr

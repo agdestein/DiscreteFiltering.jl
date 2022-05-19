@@ -1,12 +1,11 @@
 # Loss function for training
-loss_data_mse(A, u₀, uₜ, t) = sum(abs2, S(A, u₀, t) - uₜ) / sum(abs2, uₜ)
-loss_reg(A, A_ref) = sum(abs2, A - A_ref) / sum(abs2, A_ref)
+loss_data_mse(A, u₀, uₜ, t) = sum(abs2, S(A, u₀, t) - uₜ) / prod(size(uₜ))
+loss_reg(A, A_ref) = sum(abs2, A - A_ref) / prod(size(A_ref))
 
 """
 Create loss function on dataset.
 """
 function create_loss(
-    u₀,
     uₜ,
     t,
     A_ref;
@@ -14,12 +13,13 @@ function create_loss(
     loss_data = loss_data_mse,
     loss_reg = loss_reg,
 )
+    u₀ = uₜ[:, :, 1]
     loss(A) = loss_data(A, u₀, uₜ, t) + λ * loss_reg(A, A_ref)
     loss
 end
 
 # function fit_intrusive(
-#     A_ref, u₀, uₜ, t;
+#     A_ref, uₜ, t;
 #     opt = ADAM(0.01),
 #     λ = 1e-10,
 #     nbatch = 5,
@@ -28,13 +28,13 @@ end
 #     initial = A_ref,
 # )
 #     A = Matrix(A_ref)
-#     nsample = size(u₀, 2)
+#     nsample = size(uₜ, 2)
 #     batches = [1 + (nsample ÷ nbatch)*(i-1):(nsample ÷ nbatch)*i for i in 1:nbatch]
 #     for epoch = 1:nepoch
 #         # for batch = batches
 #         for i = 1:5
 #             batch = rand(batches)
-#             loss = create_loss(u₀[:, batch], uₜ[:, batch, :], t, A_ref; λ)
+#             loss = create_loss(uₜ[:, batch, :], t, A_ref; λ)
 #             result_ode = DiffEqFlux.sciml_train(loss, A, opt; cb = (A, l) -> (println(l); false), maxiters = niter)
 #             A = result_ode.u
 #         end
@@ -47,7 +47,6 @@ Fit operator to data intrusively (trough the ODE solver) using the ADAM optimize
 """
 function fit_intrusive(
     A_ref,
-    u₀,
     uₜ,
     t;
     α = 0.001,
@@ -68,9 +67,9 @@ function fit_intrusive(
     m̂ = zeros(size(A))
     v = zeros(size(A))
     v̂ = zeros(size(A))
-    nsample = size(u₀, 2)
-    batches = [(1 + (nsample ÷ nbatch) * (i - 1)):((nsample ÷ nbatch) * i) for i = 1:nbatch]
-    losses = [create_loss(u₀[:, batch], uₜ[:, batch, :], t, A_ref; λ) for batch ∈ batches]
+    nsample = size(uₜ, 2)
+    batches = [(1+(nsample÷nbatch)*(i-1)):((nsample÷nbatch)*i) for i = 1:nbatch]
+    losses = [create_loss(uₜ[:, b, :], t, A_ref; λ) for b ∈ batches]
     for epoch = 1:nepoch
         # for batch ∈ batches
         for i = 1:niter

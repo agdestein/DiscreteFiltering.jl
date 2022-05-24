@@ -43,15 +43,17 @@ F = gaussian
 
 # Continuous data
 K = 50
-ntrain = 1000
-ntest = 100
+n_train = 1000
+n_valid = 20
+n_test = 100
 
 Random.seed!(0)
-c_train = reduce(hcat, (create_signal(K) for _ = 1:ntrain))
-c_test = reduce(hcat, (create_signal(K) for _ = 1:ntest))
+c_train = reduce(hcat, (create_signal(K) for _ = 1:n_train))
+c_valid = reduce(hcat, (create_signal(K) for _ = 1:n_valid))
+c_test = reduce(hcat, (create_signal(K) for _ = 1:n_test))
 
-# jldsave("output/coefficients.jld2"; c_train, c_test)
-c_train, c_test = load("output/coefficients.jld2", "c_train", "c_test")
+# jldsave("output/coefficients.jld2"; c_train, c_valid, c_test)
+c_train, c_valid, c_test = load("output/coefficients.jld2", "c_train", "c_valid", "c_test")
 
 # Fine discretization
 Nfine = 10000
@@ -64,8 +66,10 @@ ēfine = [F.Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
 Φinv = (Φ'Φ + 1e-8I) \ Φ'
 Â = -2π * im * Φ * Diagonal(-K:K) * Φinv
 
-Φtophat = Φ
-Φgauss = Φ
+ēfine_tophat = [tophat.Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
+Φ_tophat = efine'ēfine_tophat .* Δξfine
+ēfine_gaussian = [gaussian.Ĝ(k, x) * exp(2π * im * k * x) for x ∈ ξfine, k ∈ -K:K]
+Φ_gaussian = efine'ēfine_gaussian .* Δξfine
 
 # DNS discretization
 N = 1000
@@ -76,246 +80,164 @@ Aᴺ = circulant(N, [-1, 1], [1.0, -1.0] / 2Δξ)
 # Time (T: one period)
 T = 1.0
 t_train = LinRange(0, 1T, 51)
+t_valid = LinRange(0, 2T, 11)
 t_test = LinRange(0, 2T, 21)
 
 # DNS solution: approximate
 dns_train = create_data_dns(Aᴺ, c_train, ξ, t_train)
+dns_valid = create_data_dns(Aᴺ, c_valid, ξ, t_valid)
 dns_test = create_data_dns(Aᴺ, c_test, ξ, t_test)
+float(Base.summarysize(dns_train))
 
 # DNS solution: exact
 dns_train = create_data_exact(Aᴺ, c_train, ξ, t_train)
+dns_valid = create_data_exact(Aᴺ, c_valid, ξ, t_valid)
 dns_test = create_data_exact(Aᴺ, c_test, ξ, t_test)
 
-# Coarse discretization
-MM = round.(Int, 10 .^ LinRange(1, log10(500), 11))
-# MM = [10, 50, 100, 150, 200, 250, 300]
-eAᴹ = zeros(length(MM))
-eĀ_classic = zeros(length(MM))
-eĀ_exp = zeros(length(MM))
-eĀ_ls = zeros(length(MM))
-eĀ_int = zeros(length(MM))
-eĀ_fourier = zeros(length(MM))
-MM
 
-for (i, M) ∈ enumerate(MM)
-    println("i, M = $i, $M")
-end
-
-i, M = 1, 10
-i, M = 2, 15
-i, M = 3, 22
-i, M = 4, 32
-i, M = 5, 48
-i, M = 6, 71
-i, M = 7, 105
-i, M = 8, 155
-i, M = 9, 229
-i, M = 10, 338
-i, M = 11, 500
-
-i, M = 0, 100
-
-# for (i, M) ∈ enumerate(MM)
-for (i, M) ∈ collect(enumerate(MM))[1:8]
-
-    gr()
-
-    F = tophat
-    F = gaussian
-
-    # LES Discretization
-    x = LinRange(0, 1, M + 1)[2:end]
-    Δx = 1 / M
-    Aᴹ = circulant(M, [-1, 1], [1.0, -1.0] / 2Δx)
-    Aᴹ_mat = Matrix(Aᴹ)
-
-    W = filter_matrix(F, x, ξ)
-    plotmat(W; aspect_ratio = N / M)
-    # plotmat(log.(W))
-
-    W_tophat = filter_matrix(tophat, x, ξ)
-    W_gaussian = filter_matrix(gaussian, x, ξ)
-
-    plotmat(W_tophat; aspect_ratio = N / M)
-    plotmat(W_gaussian; aspect_ratio = N / M)
-
-    train = create_data_filtered(W, Aᴺ, dns_train)
-    test = create_data_filtered(W, Aᴺ, dns_test)
-
-    # Fit non-intrusively using least squares on snapshots matrices
-    Ū = reshape(train.ū, M, :)
-    ∂Ū∂t = reshape(train.∂ū∂t, M, :)
-    λ = 1e-5
-    # Ā_ls = (∂Ū∂t * Ū') / (Ū * Ū')
-    # Ā_ls = ∂Ū∂t * Ū' / (Ū * Ū' + λ * I)
-    Ā_ls = (∂Ū∂t * Ū' + λ * Aᴹ) / (Ū * Ū' + λ * I)
-    plotmat(Ā_ls)
-    # plotmat(Ā_ls - Aᴹ)
-
-    Ā_ls_tophat = Ā_ls
-    Ā_ls_gaussian = Ā_ls
-
-    # λ = 1e-8 * M
-    # Wmat = Matrix(W)
-    # R = (W'W + λ * I) \ Wmat'
-    # # R =  Wmat' / (W*W' + λ * I)
-    # plotmat(R)
-
-    U = reshape(dns_train.u, N, :)
-    # λ = 1e-8 * size(U, 2)
-    λ = 1e-8
-    R = (U * Ū') / (Ū * Ū' + λ * I)
-    plotmat(R; aspect_ratio = M / N)
-
-    Rtophat = R
-    Rgauss = R
-
-    Ā_exp = W * Aᴺ * R
-    plotmat(Ā_exp)
-    # plotmat(Ā_exp - Aᴹ)
-
-    Ā_exp_tophat = Ā_exp
-    Ā_exp_gaussian = Ā_exp
-
-    e = [exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
-    Ā_fourier = real.(e * Â * e') .* Δx
-    plotmat(Ā_fourier)
-
-    D = circulant(M, [-1, 0, 1], [1.0, -2.0, 1.0] / Δx^2)
-    Ā_classic = Aᴹ + Diagonal(1 / 3 .* h.(x) .* dh.(x)) * D
-    plotmat(Ā_classic)
-
-    # loss = create_loss(train.ū, t_train, Aᴹ; λ = 1e-10)
-    # loss(Aᴹ)
-    # loss(WAR)
-    # plotmat(first(Zygote.gradient(loss, Matrix(Aᴹ))))
-    # plotmat(first(Zygote.gradient(loss, WAR)))
-    # result_ode = DiffEqFlux.sciml_train(loss, Aᴹ_mat, ADAM(0.01); cb = (A, l) -> (println(l); false), maxiters = 500)
-    # Ā_intrusive = result_ode.u
-    # plotmat(Ā_intrusive)
-
-    Ā_int = Aᴹ_mat
-
-    # create_testloss(ū, t) = (A -> relerr(A, ū, t; abstol = 1e-10, reltol = 1e-8))
-    create_testloss(ū, t) = (A -> relerr(A, ū, t))
-
-    Ā_int = fit_intrusive(
-        Aᴹ_mat,
-        train.ū,
-        t_train;
-        α = 0.001,
-        β₁ = 0.9,
-        β₂ = 0.999,
-        ϵ = 1e-8,
-        λ = 1e-2,
-        nbatch = 20,
-        niter = 5000,
-        nepoch = 1,
-        initial = Ā_int,
-        # testloss = create_loss(test.ū₀[:, 1:10], test.ū[:, 1:10, :], t_test, Aᴹ_mat; λ = 0),
-        testloss = create_testloss(test.ū[:, 1:10, :], t_test),
-        ntestloss = 5,
-    )
-
-    plotmat(Ā_int - Aᴹ)
-    plotmat(Ā_int)
-
-    eAᴹ[i] = relerr(Aᴹ, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    # eĀ_classic[i] = relerr(Ā_classic, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    eĀ_exp[i] = relerr(Ā_exp, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    eĀ_ls[i] = relerr(Ā_ls, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    eĀ_int[i] = relerr(Ā_int, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-    # eĀ_fourier[i] = relerr(Ā_fourier, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-
-    @show(
-        i,
-        M,
-        eAᴹ[i],
-        # eĀ_classic[i],
-        eĀ_exp[i],
-        eĀ_ls[i],
-        eĀ_int[i],
-        # eĀ_fourier[i],
-    );
-end
-
-# jldsave("output/$filtername/A_intrusive_$M.jld2"; Ā_intrusive)
-Ā_intrusive = load("output/$filtername/A_intrusive_$M.jld2", "Ā_intrusive")
-
-# jldsave(
-#     "output/$filtername/errors.jld2";
-#     eAᴹ,
-#     eĀ_classic,
-#     eWAR,
-#     eĀ_ls,
-#     eĀ_intrusive,
-#     eĀ_fourier
-# )
-
-(
-    eAᴹ,
-    # eĀ_classic,
-    eWAR,
-    eĀ_ls,
-    eĀ_intrusive,
-    # eĀ_fourier,
-) = load(
-    "output/$filtername/errors.jld2",
-    "eAᴹ",
-    # "eĀ_classic",
-    "eWAR",
-    "eĀ_ls",
-    "eĀ_intrusive",
-    # "eĀ_fourier",
-)
-
-p = plot(;
-    xlabel = L"M",
-    xscale = :log10,
-    yscale = :log10,
-    xlims = (10, 1000),
-    ylims = (1e-5, 2),
-    yticks = 10.0 .^ (-5:0),
-    minorgrid = true,
-    legend = :bottomleft,
-    legend_font_halign = :left,
-);
-plot!(p, MM, eAᴹ; marker = :diamond, label = L"\mathbf{A}^{(M)}");
-# plot!(p, MM, eĀ_classic; label = L"$\mathbf{A}^{(M)} + \mathbf{M}$");
-plot!(p, MM, eWAR; marker = :rect, label = L"\mathbf{W} \mathbf{A}^{(N)} \mathbf{R}");
-plot!(p, MM, eĀ_ls; marker = :circle, label = L"$\bar{\mathbf{A}}$, least squares");
-plot!(p, MM, eĀ_intrusive; marker = :xcross, label = L"$\bar{\mathbf{A}}$, intrusive");
-# plot!(p, MM, eĀ_fourier; label = L"$\bar{\mathbf{A}}$, Fourier");
-p
+M = 100
 
 gr()
-pgfplotsx()
 
-[
-    :none,
-    :auto,
-    :circle,
-    :rect,
-    :star5,
-    :diamond,
-    :hexagon,
-    :cross,
-    :xcross,
-    :utriangle,
-    :dtriangle,
-    :rtriangle,
-    :ltriangle,
-    :pentagon,
-    :heptagon,
-    :octagon,
-    :star4,
-    :star6,
-    :star7,
-    :star8,
-    :vline,
-    :hline,
-    :+,
-    :x,
-]
+F = tophat
+F = gaussian
 
-figsave(p, "convergence_$filtername"; size = (400, 300))
+# LES Discretization
+x = LinRange(0, 1, M + 1)[2:end]
+Δx = 1 / M
+Aᴹ = circulant(M, [-1, 1], [1.0, -1.0] / 2Δx)
+Aᴹ_mat = Matrix(Aᴹ)
+
+# Discrete filter
+W = filter_matrix(F, x, ξ)
+plotmat(W; aspect_ratio = N / M)
+plotmat(log.(W); aspect_ratio = N / M)
+
+W_tophat = filter_matrix(tophat, x, ξ)
+W_gaussian = filter_matrix(gaussian, x, ξ)
+
+plotmat(W_tophat; aspect_ratio = N / M)
+plotmat(W_gaussian; aspect_ratio = N / M)
+
+# Filtered data sets
+train = create_data_filtered(W, Aᴺ, dns_train)
+valid = create_data_filtered(W, Aᴺ, dns_valid)
+test = create_data_filtered(W, Aᴺ, dns_test)
+
+# Snapshot matrices
+U = reshape(dns_train.u, N, :)
+# ∂U∂t = reshape(train.∂u∂t, M, :)
+Ū = reshape(train.ū, M, :)
+∂Ū∂t = reshape(train.∂ū∂t, M, :)
+
+# Explicit reconstruction approach
+# Wmat = Matrix(W)
+λ_exp = 0.0
+r_exp = Inf
+Ā_exp = nothing
+for λ ∈ 10.0 .^ (-8:-2)
+    # R = (W'W + λ * I) \ Wmat'
+    # # R =  Wmat' / (W*W' + λ * I)
+    R = (U * Ū') / (Ū * Ū' + λ * I)
+    # plotmat(R; aspect_ratio = M / N)
+    Ā = W * Aᴺ * R
+    # plotmat(Ā)
+    r = relerr(Ā, valid.ū, t_valid; abstol = 1e-4 / M, reltol = 1e-2 / M)
+    if r < r_exp
+        λ_exp = λ
+        r_exp = r
+        Ā_exp = Ā
+    end
+end
+plotmat(Ā_exp)
+@show λ_exp r_exp; plotmat(Ā_exp)
+
+# M = 229
+0.006069 # 1e-6 1e-3
+0.00131  # 1e-6 1e-4
+0.001376 # 1e-7 1e-5
+0.001406 # 1e-8 1e-6
+0.001408 # 1e-9 1e-7
+0.001408 # 1e-10 1e-8
+
+# Fit non-intrusively using least squares on snapshots matrices
+λ_ls = 0.0
+r_ls = Inf
+Ā_ls = nothing
+for λ ∈ 10.0 .^ (-8:-2)
+    # Ā = (∂Ū∂t * Ū') / (Ū * Ū')
+    # Ā = ∂Ū∂t * Ū' / (Ū * Ū' + λ * I)
+    Ā = (∂Ū∂t * Ū' + λ * Aᴹ) / (Ū * Ū' + λ * I)
+    # plotmat(Ā)
+    # plotmat(Ā - Aᴹ)
+    r = relerr(Ā, valid.ū, t_valid) # ; abstol = 1e-10, reltol = 1e-8)
+    if r < r_ls
+        λ_ls = λ
+        r_ls = r
+        Ā_ls = Ā
+    end
+end
+@show λ_ls r_ls; plotmat(Ā_ls)
+
+e = [exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
+Ā_fourier = real.(e * Â * e') .* Δx
+plotmat(Ā_fourier)
+
+D = circulant(M, [-1, 0, 1], [1.0, -2.0, 1.0] / Δx^2)
+Ā_classic = Aᴹ + Diagonal(1 / 3 .* h.(x) .* dh.(x)) * D
+plotmat(Ā_classic)
+
+# loss = create_loss(train.ū, t_train, Aᴹ; λ = 1e-10)
+# loss(Aᴹ)
+# loss(WAR)
+# plotmat(first(Zygote.gradient(loss, Matrix(Aᴹ))))
+# plotmat(first(Zygote.gradient(loss, WAR)))
+# result_ode = DiffEqFlux.sciml_train(loss, Aᴹ_mat, ADAM(0.01); cb = (A, l) -> (println(l); false), maxiters = 500)
+# Ā_intrusive = result_ode.u
+# plotmat(Ā_intrusive)
+
+Ā_int = Aᴹ_mat
+state = nothing
+
+# create_testloss(ū, t) = (A -> relerr(A, ū, t; abstol = 1e-10, reltol = 1e-8))
+create_testloss(ū, t) = (A -> relerr(A, ū, t))
+
+state = fit_intrusive(
+    Aᴹ_mat,
+    train.ū,
+    t_train;
+    α = 0.001,
+    β₁ = 0.9,
+    β₂ = 0.999,
+    ϵ = 1e-8,
+    λ = λ_ls,
+    nbatch = 10,
+    niter = 1000,
+    nepoch = 1,
+    initial = state,
+    # testloss = create_loss(test.ū₀[:, 1:10], test.ū[:, 1:10, :], t_test, Aᴹ_mat; λ = 0),
+    testloss = create_testloss(test.ū[:, 1:10, :], t_test),
+    ntestloss = 5,
+)
+Ā_int = state.A_min
+
+plotmat(Ā_int - Aᴹ)
+plotmat(Ā_int)
+
+eAᴹ = relerr(Aᴹ, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+# eĀ_classic = relerr(Ā_classic, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+eĀ_exp = relerr(Ā_exp, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+eĀ_ls = relerr(Ā_ls, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+eĀ_int = relerr(Ā_int, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+# eĀ_fourier = relerr(Ā_fourier, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+
+@show(
+    M,
+    eAᴹ,
+    # eĀ_classic,
+    eĀ_exp,
+    eĀ_ls,
+    eĀ_int,
+    # eĀ_fourier,
+);
+

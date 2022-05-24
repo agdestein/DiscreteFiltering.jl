@@ -1,20 +1,13 @@
 # Loss function for training
-loss_data_mse(A, u₀, uₜ, t) = sum(abs2, S(A, u₀, t) - uₜ) / prod(size(uₜ))
 loss_reg(A, A_ref) = sum(abs2, A - A_ref) / prod(size(A_ref))
 
 """
 Create loss function on dataset.
 """
-function create_loss(
-    uₜ,
-    t,
-    A_ref;
-    λ = 1e-10,
-    loss_data = loss_data_mse,
-    loss_reg = loss_reg,
-)
+function create_loss(uₜ, t, A_ref; λ = 1e-10, loss_reg = loss_reg, kwargs...)
     u₀ = uₜ[:, :, 1]
-    loss(A) = loss_data(A, u₀, uₜ, t) + λ * loss_reg(A, A_ref)
+    loss(A) =
+        sum(abs2, S(A, u₀, t; kwargs...) - uₜ) / prod(size(uₜ)) + λ * loss_reg(A, A_ref)
     loss
 end
 
@@ -56,36 +49,74 @@ function fit_intrusive(
     λ = 1e-10,
     nbatch = 10,
     niter = 100,
-    nepoch = 1,
-    initial = A_ref,
+    initial = nothing,
     testloss = A -> nothing,
     ntestloss = 10,
+    ntime = 10,
+    ntimebatch = 10,
+    doplot = true,
+    kwargs...,
 )
-    testresult = "nothing"
-    A = Matrix(initial)
-    m = zeros(size(A))
-    m̂ = zeros(size(A))
-    v = zeros(size(A))
-    v̂ = zeros(size(A))
-    nsample = size(uₜ, 2)
-    batches = [(1+(nsample÷nbatch)*(i-1)):((nsample÷nbatch)*i) for i = 1:nbatch]
-    losses = [create_loss(uₜ[:, b, :], t, A_ref; λ) for b ∈ batches]
-    for epoch = 1:nepoch
-        # for batch ∈ batches
-        for i = 1:niter
-            print("Iteration $i \t")
-            loss = rand(losses)
-            g = first(Zygote.gradient(loss, A))
-            @. m = β₁ * m + (1 - β₁) * g
-            @. v = β₂ * v + (1 - β₂) * g^2
-            @. m̂ = m / (1 - β₁^i)
-            @. v̂ = v / (1 - β₂^i)
-            @. A = A - α * m̂ / (√v̂ + ϵ)
-            if i % ntestloss == 0
-                testresult = "$(testloss(A))"
-            end
-            println("batch: $(loss(A)) \t test: $(testresult) (-$(i % ntestloss))")
-        end
+    gr()
+
+    if isnothing(initial)
+        state = (;
+            A = Matrix(A_ref),
+            A_min = Matrix(A_ref),
+            m = zeros(size(A_ref)),
+            v = zeros(size(A_ref)),
+            hist = zeros(0),
+        )
+    else
+        state = initial
     end
-    A
+
+    (; A, A_min, m, v, hist) = state
+
+    m̂ = copy(m)
+    v̂ = copy(v)
+
+    r = testloss(A)
+    r_min = testloss(A_min)
+    r_min < Inf || (r_min = Inf)
+    nsample = size(uₜ, 2)
+    samples = [(1+(nsample÷nbatch)*(i-1)):((nsample÷nbatch)*i) for i = 1:nbatch]
+    # times = [rand(1:length(t), ntime) for _ ∈ ntimebatch]
+    times = [sort(shuffle(1:length(t))[1:ntime]) for _ ∈ ntimebatch]
+    losses =
+        [create_loss(uₜ[:, s, iₜ], t[iₜ], A_ref; λ, kwargs...) for s ∈ samples, iₜ ∈ times]
+    isempty(hist) && push!(hist, r)
+    starttime = time()
+    for i = 1:niter
+        itertime = time()
+        print("Iteration $i \t")
+        loss = rand(losses)
+        g = first(Zygote.gradient(loss, A))
+        @. m = β₁ * m + (1 - β₁) * g
+        @. v = β₂ * v + (1 - β₂) * g^2
+        @. m̂ = m / (1 - β₁^i)
+        @. v̂ = v / (1 - β₂^i)
+        @. A = A - α * m̂ / (√v̂ + ϵ)
+        if i % ntestloss == 0
+            r = testloss(A)
+            if r < r_min
+                r_min = r
+                A_min .= A
+            end
+            push!(hist, r)
+            doplot && display(
+                plot(
+                    hist;
+                    legend = false,
+                    xlabel = "Iterations",
+                    title = "Validation error",
+                ),
+            )
+        end
+        # println("batch: $(loss(A)) \t test: $(r) (-$(i % ntestloss))")
+        println(
+            "test: $r \t itertime: $(time() - itertime) \t totaltime: $(time() - starttime)",
+        )
+    end
+    state
 end

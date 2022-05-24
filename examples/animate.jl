@@ -101,3 +101,49 @@ for t ∈ LinRange(0, T / 10, 201)
     sleep(0.02)
 end
 # gif(anim, "output/fourier_coefficients_phase.gif")
+
+F = tophat
+# F = gaussian
+# λ_range = [1e-8]
+λ_range = 10.0 .^ (-12:2:0)
+anim = @animate for M ∈ unique(round.(Int, 10.0 .^ LinRange(log10(2), log10(200), 200)))
+# for M ∈ round.(Int, 10.0 .^ LinRange(log10(2), log10(200), 100))
+    x = LinRange(0, 1, M + 1)[2:end]
+    Δx = 1 / M
+    W = filter_matrix(F, x, ξ)
+    U = reshape(dns_train.u, N, :)
+    Ū = W * U
+    U_valid = reshape(dns_valid.u, N, :)
+    Ū_valid = W * U_valid
+    R_min = nothing
+    r_min = Inf
+    λ_min = 0.0
+    for λ ∈ λ_range
+        R = (U * Ū') / (Ū * Ū' + λ * I)
+        r = norm(R * Ū_valid - U_valid) / norm(U_valid)
+        if r < r_min
+            λ_min = λ
+            r_min = r
+            R_min = R
+        end
+    end
+    @info "Found R for" M λ_min r_min
+    R = R_min
+    i = 1
+    sample = dns_train.u[:, i, 1]
+    p = plot(;
+        xlabel = L"x",
+        legend = :bottomleft,
+        legend_font_halign = :left,
+        title = "$(titlecase(F.name)) filter, M = $M, N = $N",
+        xlims = (0, 1),
+        ylims = (-0.3, 0.5),
+    );
+    plot!(p, ξ, sample; label = "u");
+    plot!(p, x, W * sample; label = "Wu");
+    plot!(p, ξ, R * (W * sample); label = "RWu");
+    # display(p); sleep(0.01)
+    p
+end
+
+gif(anim, "output/reconstruction_$(F.name).gif")

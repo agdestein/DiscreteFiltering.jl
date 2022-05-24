@@ -1,3 +1,7 @@
+if isdefined(__MODULE__, :LanguageServer)
+    include("dns.jl")
+end
+
 using Plots, LaTeXStrings
 
 gr()
@@ -6,7 +10,12 @@ pgfplotsx()
 F = tophat
 F = gaussian
 
-p = plotmat(W; title = L"\mathbf{W}", aspect_ratio = N / M)
+R = operators.exp.R[i]
+Ā_exp = operators.exp.Ā[i]
+Ā_ls = operators.ls.Ā[i]
+Ā_int = operators.int.Ā[i]
+
+p = plotmat(W; title = L"\mathbf{W}", aspect_ratio = N / M) # = range(0, 0.0225; length = 5)
 name = "W"
 
 p = plotmat(R; title = L"\mathbf{R}", aspect_ratio = M / N)
@@ -21,7 +30,8 @@ name = "Abar_exp"
 p = plotmat(Ā_ls; title = L"\bar{\mathbf{A}}^{\mathrm{LS}}")
 name = "Abar_ls"
 
-p = plotmat(Ā_int - Aᴹ; title = L"\bar{\mathbf{A}}^{\mathrm{int}} - \mathbf{A}^{(M)}")
+p = plotmat(Ā_int; title = L"\bar{\mathbf{A}}^{\mathrm{int}}")
+# p = plotmat(Ā_int - Aᴹ; title = L"\bar{\mathbf{A}}^{\mathrm{int}} - \mathbf{A}^{(M)}")
 name = "Abar_int"
 
 figsave(
@@ -67,12 +77,13 @@ p = let
     surface(
         k,
         x,
-        Ĝ.(k', x);
+        F.Ĝ.(k', x);
         zlims = (-0.25, 1),
         zticks = -0.25:0.25:1,
         xlabel = L"k",
         ylabel = L"x",
-        legend = false
+        legend = false,
+        # title = "Local transfer function",
     )
 end
 
@@ -119,10 +130,10 @@ p = plot(;
     # title = "Filtered and unfiltered signals",
 );
 plot!(p, ξ, dns_train.u[:, i, 1]; label = "Unfiltered");
-plot!(p, x, Wtophat * dns_train.u[:, i, 1]; label = "Top-hat");
-plot!(p, x, Wgauss * dns_train.u[:, i, 1]; label = "Gaussian");
-# plot!(p, ξ, Rtophat * Wtophat * dns_train.u[:, i, 1]; label = "Recon Top-hat");
-# plot!(p, ξ, Rgauss * Wgauss * dns_train.u[:, i, 1]; label = "Recon Gaussian");
+plot!(p, x, W_tophat * dns_train.u[:, i, 1]; label = "Top-hat");
+plot!(p, x, W_gaussian * dns_train.u[:, i, 1]; label = "Gaussian");
+# plot!(p, ξ, R_tophat * W_tophat * dns_train.u[:, i, 1]; label = "Recon Top-hat");
+# plot!(p, ξ, R_gaussian * W_gaussian * dns_train.u[:, i, 1]; label = "Recon Gaussian");
 p
 
 figsave(p, "initial_conditions_discrete_$M"; size = (400, 300))#, suffices = ("pdf",))
@@ -169,8 +180,8 @@ j = K+1:2K+1
 k = -K:K
 c = c_test[:, i]
 a = abs.(c)
-atophat = abs.(Φtophat * c)
-agauss = abs.(Φgauss * c)
+a_tophat = abs.(Φ_tophat * c)
+a_gaussian = abs.(Φ_gaussian * c)
 yloglims = (-7, -1)
 p = plot(; 
     # xlims = (0, 1),
@@ -184,8 +195,8 @@ p = plot(;
     yticks = 10.0 .^ range(yloglims...),
 );
 scatter!(p, k[j], a[j]; label = "Unfiltered");
-scatter!(p, k[j], atophat[j]; label = "Top-hat");
-scatter!(p, k[j], agauss[j]; label = "Gaussian");
+scatter!(p, k[j], a_tophat[j]; label = "Top-hat");
+scatter!(p, k[j], a_gaussian[j]; label = "Gaussian");
 p
 
 figsave(p, "coefficients"; size = (400, 300))
@@ -222,15 +233,14 @@ figsave(p, "final"; size = (400, 300))
 
 # Error evolution
 c_long = reduce(hcat, (create_signal(K) for _ = 1:20))
-t_long = 10 .^ LinRange(-2, 2, 51);
+t_long = 10 .^ LinRange(-2, 2, 501);
 dns_long = create_data_dns(Aᴺ, c_long, ξ, t_long)
 # dns_long = create_data_exact(Aᴺ, c_test, ξ, t_long)
 long = create_data_filtered(W, Aᴺ, dns_long);
 e_long_Aᴹ = relerrs(Aᴹ, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
-e_long_WAR = relerrs(WAR, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
+e_long_Ā_exp = relerrs(Ā_exp, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
 e_long_Ā_ls = relerrs(Ā_ls, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
-e_long_Ā_intrusive =
-    relerrs(Ā_intrusive, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
+e_long_Ā_int = relerrs(Ā_int, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
 # e_long_Ā_fourier = relerrs(Ā_fourier, long.ū, t_long; abstol = 1e-10, reltol = 1e-8);
 
 t₀, t₁ = extrema(t_train)
@@ -241,22 +251,22 @@ p = plot(;
     yscale = :log10,
     legend = :bottomright,
     # xticks = 10.0 .^ (-2:2),
-    yticks = 10.0 .^ (-6:0),
+    yticks = 10.0 .^ (-8:0),
     xlims = extrema(t_long),
-    ylims = (5e-5, 2.0e0),
+    ylims = (1e-8, 2.0e0),
     legend_font_halign = :left,
     minorgrid = true
 );
-vspan!(p, [t₀, t₁]; fillalpha = 0.1, label = "Training interval");
+# vspan!(p, [t₀, t₁]; fillalpha = 0.1, label = "Training interval");
 # vline!(p, t_train; label = "Training snapshots", linestyle = :dash);
 plot!(p, t_long, e_long_Aᴹ; label = L"\mathbf{A}^{(M)}");
-plot!(p, t_long, e_long_WAR; label = L"\mathbf{W} \mathbf{A}^{(N)} \mathbf{R}");
+plot!(p, t_long, e_long_Ā_exp; label = L"$\bar{\mathbf{A}}$, explicit");
 plot!(p, t_long, e_long_Ā_ls; label = L"$\bar{\mathbf{A}}$, least squares");
-plot!(p, t_long, e_long_Ā_intrusive; label = L"$\bar{\mathbf{A}}$, intrusive");
+plot!(p, t_long, e_long_Ā_int; label = L"$\bar{\mathbf{A}}$, intrusive");
 # plot!(p, t_long, e_long_Ā_fourier; label = L"$\bar{\mathbf{A}}$, Fourier");
 p
 
-figsave(p, "comparison_$filtername"; size = (400, 300))
+figsave(p, "comparison_$(F.name)"; size = (400, 300))
 
 
 # Energy evolution

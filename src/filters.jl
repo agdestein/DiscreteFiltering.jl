@@ -1,14 +1,14 @@
 """
     create_tophat(h)
 
-Create top-hat filter width filter radius `h`.
+Create top-hat filter with filter radius `h`.
 
 The kernel is given by
 
 ```math
     G(x, \\xi) =
     \\begin{cases}
-        \\frac{1}{2h(x)} \\quad & |x - \\xi| \\leq h(x), \\\\
+        \\frac{1}{2h(x)} \\quad & |\\xi - x| \\leq h(x), \\\\
         0 \\quad & \\text{otherwise},
     \\end{cases}
 ```
@@ -30,18 +30,18 @@ end
 """
     create_gaussian(h)
 
-Create Gaussian filter, with filter radius `h`.
+Create Gaussian filter with filter radius `h`.
 
 The kernel is given by
 
 ```math
-    G(x, \\xi) = \\sqrt{\\frac{3}{2 \\pi h^2(x)}} \\euler^{-\\frac{3 (x - \\xi)^2}{2 h^2(x)}},
+    G(x, \\xi) = \\sqrt{\\frac{3}{2 \\pi h^2(x)}} \\mathrm{e}^{-\\frac{3 (\\xi - x)^2}{2 h^2(x)}},
 ```
 
 and the local transfer function by
 
 ```math
-    \\hat{G}_k(x) = \\euler^{-\\frac{2 \\pi^2}{3} k^2 h^2(x)}.
+    \\hat{G}_k(x) = \\mathrm{e}^{-\\frac{2 \\pi^2}{3} k^2 h^2(x)}.
 ```
 """
 function create_gaussian(h)
@@ -57,10 +57,10 @@ end
 
 Create filter matrix with filter `F` from fine grid `ξ` to coarse grid `x`.
 """
-function filter_matrix(F, x, ξ)
+function filter_matrix(F, x, ξ; cutoff = 1e-14)
     W = [mapreduce(ℓ -> F.G(x, ξ + ℓ), +, (-1, 0, 1)) for x in x, ξ ∈ ξ]
     W = W ./ sum(W; dims = 2)
-    W[abs.(W).<1e-14] .= 0
+    W[abs.(W).<cutoff] .= 0
     W = sparse(W)
     W
 end

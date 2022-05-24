@@ -7,6 +7,7 @@ using DiffEqFlux
 using LinearAlgebra
 using OrdinaryDiffEq
 using Plots
+using Random
 using SparseArrays
 
 # ODE right hand side
@@ -48,6 +49,7 @@ export S, S!
 export create_loss, fit_intrusive
 export relerrs, relerr
 export create_data_exact, create_data_dns, create_data_filtered
+export u, ∂u∂t, ū, ∂ū∂t
 
 # Utils
 export circulant

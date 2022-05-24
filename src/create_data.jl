@@ -1,3 +1,25 @@
+function u(c, x, t)
+    K = size(c, 1) ÷ 2
+    real(sum(c * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
+end
+function ∂u∂t(c, x, t)
+    K = size(c, 1) ÷ 2
+    real(-2π * im * sum(c * k * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
+end
+function ū(Ĝ, c, x, t)
+    K = size(c, 1) ÷ 2
+    real(sum(c * Ĝ(k, x) * exp(2π * im * k * (x - t)) for (k, c) ∈ zip(-K:K, c)))
+end
+function ∂ū∂t(Ĝ, c, x, t)
+    K = size(c, 1) ÷ 2
+    real(
+        sum(
+            -2π * im * k * c * Ĝ(k, x) * exp(2π * im * k * (x - t)) for
+            (k, c) ∈ zip(-K:K, c)
+        ),
+    )
+end
+
 """
     create_data_exact(A, c, ξ, t)
 

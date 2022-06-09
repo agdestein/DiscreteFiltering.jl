@@ -29,10 +29,10 @@ u₀(x) = 0.0
 
 function f!(du, u, p, t)
     u[1] = ga(t)
-    u[N + 1] = u[N]
+    u[N+1] = u[N]
     du[1] = 0.0
     du[2:N] = -1 / 2 * C * (u .^ 2) + ν * D * u
-    du[N + 1] = 0.0
+    du[N+1] = 0.0
 end
 
 T = 20.0

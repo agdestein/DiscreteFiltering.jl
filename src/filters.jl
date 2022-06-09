@@ -21,7 +21,7 @@ and the local transfer function by
 """
 function create_tophat(h)
     name = "top_hat"
-    G(x, ξ) = (abs(x - ξ) ≤ h(x)) / 2h(x)
+    G(x, ξ) = (abs(ξ - x) ≤ h(x)) / 2h(x)
     Ĝ(k, x) = k == 0 ? 1.0 : sin(2π * k * h(x)) / (2π * k * h(x))
     (; G, Ĝ, name)
 end
@@ -46,7 +46,7 @@ and the local transfer function by
 """
 function create_gaussian(h)
     name = "gaussian"
-    G(x, ξ) = √(3 / 2π) / h(x) * exp(-3(x - ξ)^2 / 2h(x)^2)
+    G(x, ξ) = √(3 / 2π) / h(x) * exp(-3(ξ - x)^2 / 2h(x)^2)
     Ĝ(k, x) = exp(-2π^2 / 3 * k^2 * h(x)^2)
     (; G, Ĝ, name)
 end

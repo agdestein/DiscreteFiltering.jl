@@ -4,9 +4,11 @@ Discrete filtering toolbox
 module DiscreteFiltering
 
 using DiffEqFlux
+using FFTW
 using LinearAlgebra
 using OrdinaryDiffEq
 using Plots
+using Printf
 using Random
 using SparseArrays
 
@@ -47,9 +49,9 @@ include("utils/figsave.jl")
 export create_tophat, create_gaussian, filter_matrix
 export S, S!
 export create_loss, fit_intrusive
-export relerrs, relerr
+export relerrs, relerr, spectral_relerr
 export create_data_exact, create_data_dns, create_data_filtered
-export u, ∂u∂t, ū, ∂ū∂t
+export u, dudt, ū, dūdt
 
 # Utils
 export circulant

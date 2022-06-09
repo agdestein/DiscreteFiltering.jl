@@ -36,6 +36,26 @@ end
 # end
 
 """
+    fit_intrusive(
+        A_ref,
+        uₜ,
+        t;
+        α = 0.001,
+        β₁ = 0.9,
+        β₂ = 0.999,
+        ϵ = 1e-8,
+        λ = 1e-10,
+        nbatch = 10,
+        niter = 100,
+        initial = nothing,
+        testloss = A -> nothing,
+        ntestloss = 10,
+        ntime = 10,
+        ntimebatch = 10,
+        doplot = true,
+        kwargs...,
+    )
+
 Fit operator to data intrusively (trough the ODE solver) using the ADAM optimizer.
 """
 function fit_intrusive(
@@ -115,7 +135,14 @@ function fit_intrusive(
         end
         # println("batch: $(loss(A)) \t test: $(r) (-$(i % ntestloss))")
         println(
-            "test: $r \t itertime: $(time() - itertime) \t totaltime: $(time() - starttime)",
+            join(
+                [
+                    "test: $r",
+                    @sprintf("itertime: %.3f", time() - itertime),
+                    @sprintf("totaltime: %.3f", time() - starttime),
+                ],
+                "\t",
+            ),
         )
     end
     state

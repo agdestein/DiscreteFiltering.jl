@@ -1,18 +1,29 @@
+if isdefined(@__MODULE__, :LanguageServer)
+    include("dns.jl")
+end
+
+savedir = "figures/"
+
 # Number of simulations
 n_sim = 11
 
 # Coarse discretization
 MM = round.(Int, 10 .^ LinRange(1, log10(500), n_sim))
 # MM = [10, 50, 100, 150, 200, 250, 300]
-eAᴹ = zeros(length(MM))
-eĀ_classic = zeros(length(MM))
-eĀ_exp = zeros(length(MM))
-eĀ_ls = zeros(length(MM))
-eĀ_int = zeros(length(MM))
-eĀ_fourier = zeros(length(MM))
+eAᴹ = zeros(n_sim)
+eAᴹ₂ = zeros(n_sim)
+eAᴹ₄ = zeros(n_sim)
+eAᴹ₆ = zeros(n_sim)
+eAᴹ₈ = zeros(n_sim)
+eAᴹ₁₀ = zeros(n_sim)
+eĀ_classic = zeros(n_sim)
+eĀ_exp = zeros(n_sim)
+eĀ_ls = zeros(n_sim)
+eĀ_int = zeros(n_sim)
+eĀ_fourier = zeros(n_sim)
 MM
 
-λ_range = 10 .^ (-8:0.5:0)
+λ_range = 10.0 .^ [(-10:0.5:0); 2; 4]
 
 operators = (;
     exp = (;
@@ -25,10 +36,11 @@ operators = (;
     int = (; λ = fill(0.0, n_sim), r = fill(0.0, n_sim), Ā = fill(zeros(0, 0), n_sim)),
 );
 
-
 for (i, M) ∈ enumerate(MM)
     println("i, M = $i, $M")
 end
+
+M = 50
 
 i, M = 1, 10
 i, M = 2, 15
@@ -42,8 +54,8 @@ i, M = 9, 229
 i, M = 10, 338
 i, M = 11, 500
 
-# for (i, M) ∈ enumerate(MM)
-for (i, M) ∈ collect(enumerate(MM))[1:7]
+for (i, M) ∈ enumerate(MM)
+# for (i, M) ∈ collect(enumerate(MM))[8:8]
 
     # F = tophat
     # F = gaussian
@@ -51,19 +63,49 @@ for (i, M) ∈ collect(enumerate(MM))[1:7]
     # LES Discretization
     x = LinRange(0, 1, M + 1)[2:end]
     Δx = 1 / M
-    Aᴹ = circulant(M, [-1, 1], [1.0, -1.0] / 2Δx)
-    # Aᴹ = circulant(M, -2:2, [-1, 8, 0, -8, 1] / 12Δx)
-    # Aᴹ = circulant(M, -2:0, [-1, 4, -3] / 2Δx)
+    Aᴹ₂ = circulant(M, -1:1, [1, 0, -1] / 2Δx) # 2nd order
+    Aᴹ₄ = circulant(M, -2:2, [-1, 8, 0, -8, 1] / 12Δx) # 4th order
+    Aᴹ₆ = circulant(M, -3:3, [1, -9, 45, 0, -45, 9, -1] / 60Δx) # 6th order
+    Aᴹ₈ = circulant(M, -4:4, [-3, 32, -168, 672, 0, -672, 168, -32, 3] / 840Δx) # 8th order 
+    Aᴹ₁₀ = circulant(
+        M,
+        -5:5,
+        [
+            5334336,
+            -66679200,
+            400075200,
+            -1600300800,
+            5601052800,
+            0,
+            -5601052800,
+            1600300800,
+            -400075200,
+            66679200,
+            -5334336,
+        ] / 6721263360Δx,
+    ) # 10th order 
+
+    # Aᴹ = Aᴹ₂
+    # Aᴹ = Aᴹ₄
+    # Aᴹ = Aᴹ₆
+    # Aᴹ = Aᴹ₈
+    Aᴹ = Aᴹ₁₀
     Aᴹ_mat = Matrix(Aᴹ)
-    plotmat(Aᴹ)
+    # plotmat(Aᴹ)
+    # plotmat(Aᴹ₂)
+    # plotmat(Aᴹ₄)
+    # plotmat(Aᴹ₆)
+    # plotmat(Aᴹ₈)
+    # plotmat(Aᴹ₁₀)
+
 
     # Discrete filter
     W = filter_matrix(F, x, ξ)
     # plotmat(W; aspect_ratio = N / M)
     # plotmat(log.(W))
 
-    # W_tophat = filter_matrix(tophat, x, ξ)
-    # W_gaussian = filter_matrix(gaussian, x, ξ)
+    W_tophat = filter_matrix(tophat, x, ξ)
+    W_gaussian = filter_matrix(gaussian, x, ξ)
 
     # plotmat(W_tophat; aspect_ratio = N / M)
     # plotmat(W_gaussian; aspect_ratio = N / M)
@@ -75,55 +117,60 @@ for (i, M) ∈ collect(enumerate(MM))[1:7]
 
     # Snapshot matrices
     U = reshape(dns_train.u, N, :)
-    # ∂U∂t = reshape(train.∂u∂t, M, :)
+    # dUdt = reshape(train.dudt, M, :)
     Ū = reshape(train.ū, M, :)
-    ∂Ū∂t = reshape(train.∂ū∂t, M, :)
+    dŪdt = reshape(train.dūdt, M, :)
 
     # # Unfiltered approach
     # eAᴹ[i] = relerr(Aᴹ, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eAᴹ₂[i] = relerr(Aᴹ₂, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eAᴹ₄[i] = relerr(Aᴹ₄, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eAᴹ₆[i] = relerr(Aᴹ₆, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eAᴹ₈[i] = relerr(Aᴹ₈, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    eAᴹ₁₀[i] = relerr(Aᴹ₁₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
-    # # Explicit reconstruction approach
-    # # Wmat = Matrix(W)
-    # operators.exp.r[i] = Inf
-    # for λ ∈ λ_range
-    #     # R = (W'W + λ * I) \ Wmat'
-    #     # # R =  Wmat' / (W*W' + λ * I)
-    #     R = (U * Ū') / (Ū * Ū' + λ * I)
-    #     # plotmat(R; aspect_ratio = M / N)
-    #     Ā = W * Aᴺ * R
-    #     # plotmat(Ā)
-    #     r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
-    #     if r < operators.exp.r[i]
-    #         operators.exp.λ[i] = λ
-    #         operators.exp.r[i] = r
-    #         operators.exp.Ā[i] = Ā
-    #         operators.exp.R[i] = R
-    #     end
-    # end
-    # @show operators.exp.λ[i] operators.ls.r[i]
+    # Explicit reconstruction approach
+    # Wmat = Matrix(W)
+    operators.exp.r[i] = Inf
+    for λ ∈ λ_range
+        # R = (W'W + λ * I) \ Wmat'
+        # # R =  Wmat' / (W*W' + λ * I)
+        R = (U * Ū') / (Ū * Ū' + λ * I)
+        # plotmat(R; aspect_ratio = M / N)
+        Ā = W * Aᴺ * R
+        # plotmat(Ā)
+        r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
+        if r < operators.exp.r[i]
+            operators.exp.λ[i] = λ
+            operators.exp.r[i] = r
+            operators.exp.Ā[i] = Ā
+            operators.exp.R[i] = R
+        end
+    end
+    @show operators.exp.λ[i] operators.exp.r[i]
     # plotmat(operators.exp.Ā[i])
-    #
-    # eĀ_exp[i] = relerr(operators.exp.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
-    # # Fit non-intrusively using least squares on snapshots matrices
-    # operators.ls.r[i] = Inf
-    # for λ ∈ λ_range
-    #     # Ā = (∂Ū∂t * Ū') / (Ū * Ū')
-    #     # Ā = ∂Ū∂t * Ū' / (Ū * Ū' + λ * I)
-    #     Ā = (∂Ū∂t * Ū' + λ * Aᴹ) / (Ū * Ū' + λ * I)
-    #     # plotmat(Ā)
-    #     # plotmat(Ā - Aᴹ)
-    #     r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
-    #     if r < operators.ls.r[i]
-    #         operators.ls.λ[i] = λ
-    #         operators.ls.r[i] = r
-    #         operators.ls.Ā[i] = Ā
-    #     end
-    # end
-    # @show operators.ls.λ[i] operators.ls.r[i]
+    eĀ_exp[i] = relerr(operators.exp.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+
+    # Fit non-intrusively using least squares on snapshots matrices
+    operators.ls.r[i] = Inf
+    for λ ∈ λ_range
+        # Ā = (dŪdt * Ū') / (Ū * Ū')
+        # Ā = dŪdt * Ū' / (Ū * Ū' + λ * I)
+        Ā = (dŪdt * Ū' + λ * Aᴹ) / (Ū * Ū' + λ * I)
+        # plotmat(Ā)
+        # plotmat(Ā - Aᴹ)
+        r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
+        if r < operators.ls.r[i]
+            operators.ls.λ[i] = λ
+            operators.ls.r[i] = r
+            operators.ls.Ā[i] = Ā
+        end
+    end
+    @show operators.ls.λ[i] operators.ls.r[i]
     # plotmat(operators.ls.Ā[i])
-    #
-    # eĀ_ls[i] = relerr(operators.ls.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+
+    eĀ_ls[i] = relerr(operators.ls.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
     # D = circulant(M, [-1, 0, 1], [1.0, -2.0, 1.0] / Δx^2)
     # Ā_classic = Aᴹ + Diagonal(1 / 3 .* h.(x) .* dh.(x)) * D
@@ -137,21 +184,24 @@ for (i, M) ∈ collect(enumerate(MM))[1:7]
     # plotmat(first(Zygote.gradient(loss, Matrix(Aᴹ))))
     # plotmat(first(Zygote.gradient(loss, WAR)))
     # result_ode = DiffEqFlux.sciml_train(loss, Aᴹ_mat, ADAM(0.01); cb = (A, l) -> (println(l); false), maxiters = 500)
-    # Ā_intrusive = result_ode.u
-    # plotmat(Ā_intrusive)
+    # Ā_int= result_ode.u
+    # plotmat(Ā_int)
 
     # create_testloss(ū, t) = (A -> relerr(A, ū, t; abstol = 1e-10, reltol = 1e-8))
-    create_testloss(ū, t) = (A -> relerr(A, ū, t; abstol = 1e-5 / size(A, 1), reltol = 1e-3 / size(A, 1)))
-    
-    # 
+    create_testloss(ū, t) =
+        (A -> relerr(A, ū, t; abstol = 1e-5 / size(A, 1), reltol = 1e-3 / size(A, 1)))
+
+    #
     state = nothing
 
-    # operators.int.Ā[i] = Aᴹ_mat
+    operators.int.Ā[i] = Aᴹ_mat
     operators.int.r[i] = Inf
+
     # for λ ∈ λ_range
-    for λ ∈ [1e-5]
+    for λ ∈ [1e-8]
         state = fit_intrusive(
             Aᴹ_mat,
+            # operators.exp.Ā[i],
             train.ū,
             t_train;
             α = 0.001,
@@ -160,7 +210,7 @@ for (i, M) ∈ collect(enumerate(MM))[1:7]
             ϵ = 1e-8,
             λ,
             nbatch = 100,
-            niter = 1000,
+            niter = 5000,
             initial = state,
             # testloss = create_loss(test.ū₀[:, 1:10], test.ū[:, 1:10, :], t_test, Aᴹ_mat; λ = 0),
             testloss = create_testloss(valid.ū, t_valid),
@@ -168,8 +218,8 @@ for (i, M) ∈ collect(enumerate(MM))[1:7]
             ntime = 20,
             ntimebatch = 10,
             doplot = true,
-            reltol = 1e-6,
-            abstol = 1e-8,
+            reltol = 1e-8,
+            abstol = 1e-10,
         )
         Ā = state.A_min
         r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
@@ -181,35 +231,47 @@ for (i, M) ∈ collect(enumerate(MM))[1:7]
     end
     @show operators.int.λ[i] operators.int.r[i]
     # plotmat(operators.int.Ā[i])
-
+    plotmat(state.A)
+    plotmat(state.A - Aᴹ)
     # plotmat(Ā_int - Aᴹ)
     # plotmat(Ā_int)
+    # plot(state.hist)
 
     eĀ_int[i] = relerr(operators.int.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
     # e = [exp(2π * im * k * x) for x ∈ x, k ∈ -K:K]
     # Ā_fourier = real.(e * Â * e') .* Δx
     # plotmat(Ā_fourier)
-    #
+
     # eĀ_fourier[i] = relerr(Ā_fourier, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
     @show(
         i,
         M,
-        eAᴹ[i],
+        # eAᴹ[i],
+        eAᴹ₂[i],
+        eAᴹ₄[i],
+        eAᴹ₆[i],
+        eAᴹ₈[i],
+        eAᴹ₁₀[i],
         # eĀ_classic[i],
         eĀ_exp[i],
         eĀ_ls[i],
         eĀ_int[i],
-        # eĀ_fourier[i],
+        eĀ_fourier[i],
     )
+
 end
 
-# jldsave("output/convergence/operators_$(F.name).jld2"; operators)
-operators = load("output/convergence/operators_$(F.name).jld2", "operators")
+filename = "output/convergence/K$(K)/operators_$(F.name).jld2"
+# @info("Saving operators to \"$filename\"")
+# jldsave(filename; operators)
+@info("Loading operators \"$filename\"")
+operators = load("output/convergence/K$(K)/operators_$(F.name).jld2", "operators")
 
+# @info("Saving operators \"$filename\"")
 # jldsave(
-#     "output/convergence/errors_$(F.name).jld2";
+#     "output/convergence/K$(K)/errors_$(F.name).jld2";
 #     eAᴹ,
 #     eĀ_classic,
 #     eĀ_exp,
@@ -218,21 +280,14 @@ operators = load("output/convergence/operators_$(F.name).jld2", "operators")
 #     eĀ_fourier,
 # )
 
-(
-    eAᴹ,
-    eĀ_classic,
-    eĀ_exp,
-    eĀ_ls,
-    eĀ_int,
-    eĀ_fourier,
-) = load(
-    "output/convergence/errors_$(F.name).jld2",
-      "eAᴹ"       ,
-      "eĀ_classic",
-      "eĀ_exp"    ,
-      "eĀ_ls"     ,
-      "eĀ_int"    ,
-      "eĀ_fourier",
+(eAᴹ, eĀ_classic, eĀ_exp, eĀ_ls, eĀ_int, eĀ_fourier) = load(
+    "output/convergence/K$(K)/errors_$(F.name).jld2",
+    "eAᴹ",
+    "eĀ_classic",
+    "eĀ_exp",
+    "eĀ_ls",
+    "eĀ_int",
+    "eĀ_fourier",
 )
 
 p = plot(;
@@ -240,22 +295,28 @@ p = plot(;
     xscale = :log10,
     yscale = :log10,
     xlims = (10, 1000),
-    ylims = (1e-4, 2),
-    yticks = 10.0 .^ (-4:0),
+    ylims = (1e-2, 2),
+    yticks = 10.0 .^ (-6:0),
     minorgrid = true,
     legend = :bottomleft,
     legend_font_halign = :left,
 );
 # vline!(p, [2K]; label = L"2 K", linestyle = :dash);
-plot!(p, MM, eAᴹ; marker = :diamond, label = L"\mathbf{A}^{(M)}");
+# plot!(p, MM, eAᴹ; marker = :diamond, label = L"\mathbf{A}^{(M)}");
+plot!(p, MM, eAᴹ₂; marker = :diamond, label = L"\mathbf{A}_2^{(M)}");
+plot!(p, MM, eAᴹ₄; marker = :diamond, label = L"\mathbf{A}_4^{(M)}");
+plot!(p, MM, eAᴹ₆; marker = :diamond, label = L"\mathbf{A}_6^{(M)}");
+plot!(p, MM, eAᴹ₈; marker = :diamond, label = L"\mathbf{A}_8^{(M)}");
+plot!(p, MM, eAᴹ₁₀; marker = :diamond, label = L"\mathbf{A}_{10}^{(M)}");
 # plot!(p, MM, eĀ_classic; label = L"$\mathbf{A}^{(M)} + \mathbf{M}$");
 plot!(p, MM, eĀ_exp; marker = :rect, label = L"$\bar{\mathbf{A}}$, explicit");
 plot!(p, MM, eĀ_ls; marker = :circle, label = L"$\bar{\mathbf{A}}$, least squares");
 plot!(p, MM, eĀ_int; marker = :xcross, label = L"$\bar{\mathbf{A}}$, intrusive");
-# plot!(p, MM, eĀ_fourier; label = L"$\bar{\mathbf{A}}$, Fourier");
+# plot!(p, MM, eĀ_fourier; marker = :cross, label = L"$\bar{\mathbf{A}}$, Fourier");
 p
 
-figsave(p, "convergence_$(F.name)"; size = (400, 300))
+figsave(p, "convergence_$(F.name)"; savedir = "output", suffices = ("pdf",))
+# figsave(p, "convergence_$(F.name)"; size = (400, 300))
 
 gr()
 pgfplotsx()
@@ -286,4 +347,3 @@ pgfplotsx()
     :+,
     :x,
 ]
-

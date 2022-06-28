@@ -8,7 +8,7 @@ savedir = "output"
 
 c = c_train
 i = 1
-tplot = LinRange(0, 1, 21)
+tplot = LinRange(0, 1, 101)
 # sol = S!(state.A, test.ū[:, iplot, 1], tplot)
 ylims = extrema([u(c[:, i], ξ, 0) for ξ ∈ ξ])
 # anim = @animate for (it, t) ∈ enumerate(tplot)
@@ -20,6 +20,7 @@ for (it, t) ∈ enumerate(tplot)
         ylims,
         xlabel = "x",
         # xlabel = "x - t",
+        # title = "Data sample",
         title = "Solution, t = $tstr",
         legend = :bottomleft,
         size = (400, 300),
@@ -80,7 +81,7 @@ shiftback(x) = mod(x + π, 2π) - π
 
 # anim = @animate for t ∈ LinRange(0, T/20, 101)
 for t ∈ LinRange(0, T / 10, 201)
-    Et = [exp(-2π * im * k * t) for k ∈ (-K):K]
+    Et = [exp(-2π * im * k * t) for k ∈ -K:K]
     p = plot(;
         xlabel = "k",
         legend = :topright,

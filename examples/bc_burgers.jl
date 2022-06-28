@@ -2,12 +2,13 @@ using LinearAlgebra
 using SparseArrays
 using GLMakie
 using OrdinaryDiffEq
+using DiscreteFiltering
 
 # ν = 0.0005
 # ν = 5e-5
 ν = 0.0
 
-N = 1000
+N = 100
 x = LinRange(0, 1, N + 1)
 Δx = 1 / N
 
@@ -46,6 +47,7 @@ for t ∈ LinRange(0.0, T, 5)
     lines!(x, sol(t); label = "t = $t")
 end
 axislegend(ax)
+fig
 
 nframe = 200
 fig = Figure()
@@ -56,4 +58,18 @@ lines!(x, u)
 record(fig, "burgers.mp4", 1:nframe) do frame
     t = frame / nframe * T
     u[] = sol(t)
+end
+
+nframe = 200
+fig = Figure()
+ax = Axis(fig[1, 1])
+ylims!(0, 0.4)
+u = Observable(u₀.(x))
+lines!(x, u)
+fig
+
+for frame = 1:nframe
+    t = frame / nframe * T
+    u[] = sol(t)
+    sleep(0.02)
 end

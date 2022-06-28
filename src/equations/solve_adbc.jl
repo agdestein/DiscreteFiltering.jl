@@ -61,10 +61,10 @@ function solve_adbc(
         ūᵏ⁺¹[end] = wₙ'uᵏ⁺¹
 
         # Next inner points for filtered solution
-        ūᵏ⁺¹[2:(end - 1)] .+=
-            Δt .* D[2:(end - 1), :]ūᵏ .+ Δt .* W[2:(end - 1), :]f.(x, tᵏ) .+
-            Δt .* (abs.(x[2:(end - 1)] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[end - 1]) /
-            Δx .- Δt .* (abs.(x[2:(end - 1)] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[2] - g_a(tᵏ)) / Δx
+        ūᵏ⁺¹[2:(end-1)] .+=
+            Δt .* D[2:(end-1), :]ūᵏ .+ Δt .* W[2:(end-1), :]f.(x, tᵏ) .+
+            Δt .* (abs.(x[2:(end-1)] .- b) .≤ h₀) ./ 2h₀ .* (g_b(tᵏ) - uᵏ[end-1]) / Δx .-
+            Δt .* (abs.(x[2:(end-1)] .- a) .≤ h₀) ./ 2h₀ .* (uᵏ[2] - g_a(tᵏ)) / Δx
 
         # Advance by Δt
         ūᵏ .= ūᵏ⁺¹
@@ -119,18 +119,18 @@ function solve_adbc(
 
     # Move weights of outside points to endpoint
     for i = 1:nw
-        W[i, 1] += sum(w[1:(nw + 1 - i)])
-        W[end + 1 - i, end] += sum(w[(end - nw + i):end])
+        W[i, 1] += sum(w[1:(nw+1-i)])
+        W[end+1-i, end] += sum(w[(end-nw+i):end])
     end
 
     # Boundary stencils
     w₀ = W[1, :]
     wₙ = W[end, :]
 
-    G_a = G.(x[2:(end - 1)] .- a)
-    G_b = G.(b .- x[2:(end - 1)])
+    G_a = G.(x[2:(end-1)] .- a)
+    G_b = G.(b .- x[2:(end-1)])
 
-    f̄ᵏ_constant = apply_filter_extend(x -> f(x, tlist[1]), filter, domain).(x[2:(end - 1)])
+    f̄ᵏ_constant = apply_filter_extend(x -> f(x, tlist[1]), filter, domain).(x[2:(end-1)])
 
     function du!(du, ūᵏ, tᵏ, Δt, p)
         @unpack uᵏ, uᵏ⁺¹, Dūᵏ, fᵏ, f̄ᵏ, δ = p
@@ -166,7 +166,7 @@ function solve_adbc(
         if isnothing(uₓ)
             # Approximate boundary terms
             uₓ_a = (uᵏ[2] - g_a(tᵏ)) / Δx
-            uₓ_b = (g_b(tᵏ) - uᵏ[end - 1]) / Δx
+            uₓ_b = (g_b(tᵏ) - uᵏ[end-1]) / Δx
         else
             # Exact boundary terms
             uₓ_a = uₓ(a, tᵏ)
@@ -174,8 +174,8 @@ function solve_adbc(
         end
 
         # Next inner points for filtered solution
-        du_in = @view du[2:(end - 1)]
-        Dūᵏ_in = @view Dūᵏ[2:(end - 1)]
+        du_in = @view du[2:(end-1)]
+        Dūᵏ_in = @view Dūᵏ[2:(end-1)]
         @. du_in = Dūᵏ_in + f̄ᵏ + G_b * uₓ_b - G_a * uₓ_a
     end
 
@@ -218,7 +218,7 @@ function solve_adbc(
         uᵏ⁺¹ = copy(ūᵏ),
         Dūᵏ = copy(ūᵏ),
         fᵏ = copy(ūᵏ),
-        f̄ᵏ = copy(ūᵏ[2:(end - 1)]),
+        f̄ᵏ = copy(ūᵏ[2:(end-1)]),
         δ,
     )
     tᵏ = tlist[1]

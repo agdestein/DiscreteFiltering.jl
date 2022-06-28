@@ -53,6 +53,15 @@ function create_data_dns(A, c, ξ, t; abstol = 1e-10, reltol = 1e-8, kwargs...)
     u = Array(sol)
     (; u)
 end
+function create_data_dns_stencil(stencil, c, ξ, t; abstol = 1e-10, reltol = 1e-8, kwargs...)
+    nfreq = size(c, 1)
+    K = nfreq ÷ 2
+    e = [exp(2π * im * k * ξ) for ξ ∈ ξ, k ∈ -K:K]
+    u₀ = real.(e * c)
+    sol = S_stencil!(stencil, u₀, t; abstol, reltol, kwargs...)
+    u = Array(sol)
+    (; u)
+end
 
 """
     create_data_filtered(W, A, dns)

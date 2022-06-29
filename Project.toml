@@ -21,6 +21,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 FFTW = "1.4"
 JLD2 = "0.4"
 OrdinaryDiffEq = "5, 6"
+PGFPlotsX = "1"
 Plots = "1"
 julia = "1"
 

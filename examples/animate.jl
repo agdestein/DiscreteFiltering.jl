@@ -27,13 +27,14 @@ for (it, t) ∈ enumerate(tplot)
         dpi = 200,
     )
     span = x -> [x - h(x), x + h(x)]
-    vspan!(p, span(1/4); fillalpha = 0.1, color = 1, label = nothing);
-    vspan!(p, span(3/4); fillalpha = 0.1, color = 1, label = nothing);
+    vspan!(p, span(1 / 4); fillalpha = 0.1, color = 1, label = nothing)
+    vspan!(p, span(3 / 4); fillalpha = 0.1, color = 1, label = nothing)
     plot!(p, ξ, ξ -> u(c[:, i], ξ + τ, t); color = 1, label = "Unfiltered")
     plot!(p, ξ, ξ -> ū(tophat.Ĝ, c[:, i], ξ + τ, t); color = 2, label = "Top-hat")
     plot!(p, ξ, ξ -> ū(gaussian.Ĝ, c[:, i], ξ + τ, t); color = 3, label = "Gaussian")
     # scatter!(p, x, sol[it])
-    display(p); sleep(0.005)
+    display(p)
+    sleep(0.01)
     p
 end
 
@@ -68,10 +69,23 @@ for t ∈ LinRange(0, T, 101)
     #     label = "Filtered",
     #     marker = :c,
     # )
-    scatter!(p, k[ik], func.(Φ_tophat * (Et .* c[:, i]))[ik]; label = "Top-Hat", marker = :c)
-    scatter!(p, k[ik], func.(Φ_gaussian * (Et .* c[:, i]))[ik]; label = "Gaussian", marker = :c)
+    scatter!(
+        p,
+        k[ik],
+        func.(Φ_tophat * (Et .* c[:, i]))[ik];
+        label = "Top-Hat",
+        marker = :c,
+    )
+    scatter!(
+        p,
+        k[ik],
+        func.(Φ_gaussian * (Et .* c[:, i]))[ik];
+        label = "Gaussian",
+        marker = :c,
+    )
     p
-    display(p); sleep(0.005)
+    display(p)
+    sleep(0.005)
 end
 
 # gif(anim, "output/fourier_coefficients_absolute.gif")
@@ -105,7 +119,8 @@ for t ∈ LinRange(0, T / 10, 201)
         marker = :c,
     )
     p
-    display(p); sleep(0.005)
+    display(p)
+    sleep(0.005)
 end
 # gif(anim, "output/fourier_coefficients_phase.gif")
 
@@ -152,7 +167,8 @@ for M ∈ [1, 10, 50, 100]
     plot!(p, ξ, sample; label = "u")
     plot!(p, x, W * sample; label = "Wu")
     plot!(p, ξ, R * (W * sample); label = "RWu")
-    display(p); sleep(0.005)
+    display(p)
+    sleep(0.005)
     p
 end
 
@@ -168,7 +184,7 @@ F, tit = gaussian, "Gaussian"
 # for M ∈ unique(round.(Int, 10.0 .^ LinRange(log10(2), log10(200), 100)))
 # anim = @animate for M ∈ 1:100
 # for M ∈ 1:100
-for M = [1, 50, 100]
+for M in [1, 50, 100]
     x = LinRange(0, 1, M + 1)[2:end]
     Δx = 1 / M
     W = filter_matrix(F, x, ξ)
@@ -221,7 +237,8 @@ for M = [1, 50, 100]
         label = "RWu",
         marker = :diamond,
     )
-    display(p); sleep(0.005)
+    display(p)
+    sleep(0.005)
     p
 end
 

@@ -64,3 +64,41 @@ function filter_matrix(F, x, ξ; cutoff = 1e-14)
     W = sparse(W)
     W
 end
+
+"""
+    interpolation_matrix(x, y)
+
+Create matrix for interpolating from grid ``x \\in \\mathbb{R}^N`` to ``y \\in \\mathbb{R}^M``.
+"""
+function interpolation_matrix(L, x, y)
+    @assert issorted(x)
+    @assert issorted(y)
+    @assert x[end] - x[1] ≤ L
+    @assert y[end] - y[1] ≤ L
+    N = length(x)
+    M = length(y)
+    a = [x[end] - L; x[1:end]]'
+    b = [x[1:end]; x[1] + L]'
+    Ia = a .< y .≤ b
+    Ib = circshift(Ia, (0, 1))
+    A = @. (b - y) / (b - a)
+    B = circshift(@.((y - a) / (b - a)), (0, 1))
+    P = @. A * Ia + B * Ib
+    IP = P[:, 2:end]
+    IP[:, end] += P[:, 1]
+    IP
+end
+
+# if false
+# IP = interpolation_matrix(1, x, ξ)
+# a = sin.(2π .* x)
+# plot(x, a; marker = :o)
+# plot!(ξ, IP * a)
+# end
+
+# if false
+# IP = interpolation_matrix(1, ξ, x)
+# a = sin.(2π .* ξ)
+# plot(ξ, a)
+# plot!(x, IP * a; marker = :o)
+# end

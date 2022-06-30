@@ -20,7 +20,7 @@ x = LinRange(0, 1, M + 1)[2:end]
 if iseven(M)
     K_cos = M ÷ 2
     K_sin = M ÷ 2 - 1
-else 
+else
     K_cos = M ÷ 2
     K_sin = M ÷ 2
 end

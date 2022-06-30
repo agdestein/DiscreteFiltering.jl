@@ -17,7 +17,7 @@ Ā_emb = operators.emb.Ā[i]
 
 sum(Aᴹ; dims = 2)
 sum(Ā_int; dims = 2)
-sum(Ā_df ; dims = 2)
+sum(Ā_df; dims = 2)
 sum(Ā_emb; dims = 2)
 
 name = "W"
@@ -152,8 +152,8 @@ p = plot(;
     # title = "Filtered and unfiltered signals",
 );
 span = x -> [x - h(x), x + h(x)]
-vspan!(p, span(1/4); fillalpha = 0.1, color = 1, label = L"x \pm h(x)");
-vspan!(p, span(3/4); fillalpha = 0.1, color = 1, label = nothing);
+vspan!(p, span(1 / 4); fillalpha = 0.1, color = 1, label = L"x \pm h(x)");
+vspan!(p, span(3 / 4); fillalpha = 0.1, color = 1, label = nothing);
 plot!(p, ξ, ξ -> u(c_train[:, i], ξ, 0.0); color = 1, label = "Unfiltered");
 plot!(p, ξ, ξ -> ū(tophat.Ĝ, c_train[:, i], ξ, 0.0); color = 2, label = "Top-hat");
 # plot!(p, ξ, ξ -> u(Φtophat * c_train[:, i], ξ, 0.0); label = "Top-hat");
@@ -259,13 +259,13 @@ t_disp = LinRange(0, 100, 2001);
 dns_disp = create_data_exact(c_disp, ξ, t_disp)
 disp = create_data_filtered(W, Aᴺ, dns_disp);
 # disp_Aᴹ = S!(Aᴹ, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
-disp_Aᴹ₂   = S!(Aᴹ₂,   disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
-disp_Aᴹ₄   = S!(Aᴹ₄,   disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
-disp_Aᴹ₆   = S!(Aᴹ₆,   disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
-disp_Aᴹ₈   = S!(Aᴹ₈,   disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
-disp_Aᴹ₁₀  = S!(Aᴹ₁₀,  disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
+disp_Aᴹ₂ = S!(Aᴹ₂, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
+disp_Aᴹ₄ = S!(Aᴹ₄, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
+disp_Aᴹ₆ = S!(Aᴹ₆, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
+disp_Aᴹ₈ = S!(Aᴹ₈, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
+disp_Aᴹ₁₀ = S!(Aᴹ₁₀, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
 disp_Ā_int = S!(Ā_int, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
-disp_Ā_df  = S!(Ā_df,  disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
+disp_Ā_df = S!(Ā_df, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
 disp_Ā_emb = S!(Ā_emb, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
 # disp_Ā_fourier = S!(Ā_fourier, disp.ū[:, :, 1], t_disp; abstol = 1e-10, reltol = 1e-8);
 
@@ -278,7 +278,7 @@ end
 
 ylims = extrema(dns_disp.u[:, :, 1])
 # for (it, t) ∈ enumerate(t_disp)
-for (it, t) ∈ collect(enumerate(t_disp))[1:200]
+for (it, t) ∈ collect(enumerate(t_disp))[1:50]
     p = plot(;
         # xlabel = "x",
         xlabel = "x - t",
@@ -295,7 +295,8 @@ for (it, t) ∈ collect(enumerate(t_disp))[1:200]
     # plotsort!(p, shift.(x, t), disp_Ā_int[it]; label = "Ā_int")
     plotsort!(p, shift.(x, t), disp_Ā_df[it]; label = "Ā_df")
     # plotsort!(p, shift.(x, t), disp_Ā_emb[it]; label = "Ā_emb")
-    display(p); sleep(0.02)
+    display(p)
+    sleep(0.02)
 end
 
 û = abs.(fft(dns_disp.u[:, 1, 1])[1:K]) / N
@@ -323,9 +324,16 @@ for (it, t) ∈ collect(enumerate(t_disp))[1:200]
     # data = disp_Ā_df
     data = disp_Ā_emb
     scatter!(p, k, abs.(fft(data[it])[k]) / M; label = "Filtered", marker = :rect)
-    scatter!(p, 1:K, abs.(fft(R * data[it])[1:K]) / N; label = "Reconstruction", marker = :diamond)
+    scatter!(
+        p,
+        1:K,
+        abs.(fft(R * data[it])[1:K]) / N;
+        label = "Reconstruction",
+        marker = :diamond,
+    )
     p
-    display(p); sleep(0.005)
+    display(p)
+    sleep(0.005)
 end
 
 # Error evolution
@@ -359,10 +367,10 @@ p = plot(;
     legend = :topleft,
     xlims = extrema(t_long[iplot]),
     # xticks = 10.0 .^ (-2:2),
-    # ylims = (6e-3, 1.0e0),
-    ylims = (4e-4, 1.0e0),
-    # yticks = 10.0 .^ (-2:0),
-    yticks = 10.0 .^ (-3:0),
+    ylims = (6e-3, 1.0e0),
+    # ylims = (4e-4, 1.0e0),
+    yticks = 10.0 .^ (-2:0),
+    # yticks = 10.0 .^ (-3:0),
     legend_font_halign = :left,
     minorgrid = true,
 );
@@ -373,9 +381,27 @@ plot!(p, t_long[iplot], e_long_Aᴹ[iplot]; color = 1, label = L"\mathbf{A}^{(M)
 # plot!(p, t_long[iplot], e_long_Aᴹ₆[iplot]; label = L"\mathbf{A}_6^{(M)}");
 # plot!(p, t_long[iplot], e_long_Aᴹ₈[iplot]; label = L"\mathbf{A}_8^{(M)}");
 # plot!(p, t_long[iplot], e_long_Aᴹ₁₀[iplot]; label = L"\mathbf{A}_{10}^{(M)}");
-plot!(p, t_long[iplot], e_long_Ā_int[iplot]; color = 2, label = L"$\bar{\mathbf{A}}$, intrusive");
-plot!(p, t_long[iplot], e_long_Ā_df[iplot]; color = 3, label = L"$\bar{\mathbf{A}}$, derivative fit");
-plot!(p, t_long[iplot], e_long_Ā_emb[iplot]; color = 4, label = L"$\bar{\mathbf{A}}$, embedded");
+plot!(
+    p,
+    t_long[iplot],
+    e_long_Ā_int[iplot];
+    color = 2,
+    label = L"$\bar{\mathbf{A}}$, intrusive",
+);
+plot!(
+    p,
+    t_long[iplot],
+    e_long_Ā_df[iplot];
+    color = 3,
+    label = L"$\bar{\mathbf{A}}$, derivative fit",
+);
+plot!(
+    p,
+    t_long[iplot],
+    e_long_Ā_emb[iplot];
+    color = 4,
+    label = L"$\bar{\mathbf{A}}$, embedded",
+);
 # plot!(p, t_long[iplot], e_long_Ā_fourier[iplot]; label = L"$\bar{\mathbf{A}}$, Fourier");
 p
 

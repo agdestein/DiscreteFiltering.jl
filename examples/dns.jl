@@ -10,6 +10,7 @@ cd("examples")
 using DiscreteFiltering
 using JLD2
 using LinearAlgebra
+using SciMLSensitivity
 using SparseArrays
 using Plots
 using LaTeXStrings
@@ -41,7 +42,8 @@ c_test = reduce(hcat, (create_signal(K) for _ = 1:n_test))
 c_long = reduce(hcat, (create_signal(K) for _ = 1:n_long))
 
 # jldsave("output/K$K/coefficients.jld2"; c_train, c_valid, c_test)
-c_train, c_valid, c_test = load("output/K$K/coefficients.jld2", "c_train", "c_valid", "c_test")
+c_train, c_valid, c_test =
+    load("output/K$K/coefficients.jld2", "c_train", "c_valid", "c_test")
 
 # DNS discretization
 N = 1000
@@ -69,10 +71,10 @@ s₁₀ =
     ] / 6721263360Δξ # 10th order 
 
 # DNS operators
-Aᴺ₂ = circulant(N, -1:1,  s₂)
-Aᴺ₄ = circulant(N, -2:2,  s₄)
-Aᴺ₆ = circulant(N, -3:3,  s₆)
-Aᴺ₈ = circulant(N, -4:4,  s₈)
+Aᴺ₂ = circulant(N, -1:1, s₂)
+Aᴺ₄ = circulant(N, -2:2, s₄)
+Aᴺ₆ = circulant(N, -3:3, s₆)
+Aᴺ₈ = circulant(N, -4:4, s₈)
 Aᴺ₁₀ = circulant(N, -5:5, s₁₀)
 
 # Aᴺ = Aᴺ₂

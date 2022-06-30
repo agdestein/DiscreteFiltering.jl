@@ -38,9 +38,9 @@ function spectral_relerr(A, uₜ, t; kwargs...)
     errs = zeros(M, length(t))
     for i ∈ eachindex(t)
         for j = 1:nsample
-            errs[:, i] +=
-                # @views abs.(fft(sol[:, j, i]) - fft(uₜ[:, j, i])) ./ abs.(fft(uₜ[:, j, i]))
-                    @views abs.(fft(sol[:, j, i]) - fft(uₜ[:, j, i])) ./ sum(abs.(fft(uₜ[:, j, i]))) 
+            errs[:, i] += @views(
+                abs.(fft(sol[:, j, i]) - fft(uₜ[:, j, i])) ./ sum(abs.(fft(uₜ[:, j, i])))
+            )
         end
         errs[i] /= nsample
     end

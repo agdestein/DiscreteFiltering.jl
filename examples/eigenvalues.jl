@@ -67,7 +67,12 @@ scatter!(p, func(eigᴹ.values); marker = :diamond, label = L"\mathbf{A}^{(M)}")
 # scatter!(p, func(eigᴹ₈.values); marker = :diamond, label = L"\mathbf{A}_8^{(M)}")
 # scatter!(p, func(eigᴹ₁₀.values); marker = :diamond, label = L"\mathbf{A}_{10}^{(M)}")
 scatter!(p, func(eig_int.values); marker = :rect, label = L"$\bar{\mathbf{A}}$, intrusive");
-scatter!(p, func(eig_df.values); marker = :circle, label = L"$\bar{\mathbf{A}}$, derivative fit");
+scatter!(
+    p,
+    func(eig_df.values);
+    marker = :circle,
+    label = L"$\bar{\mathbf{A}}$, derivative fit",
+);
 scatter!(p, func(eig_emb.values); marker = :xcross, label = L"$\bar{\mathbf{A}}$, embedded");
 p
 
@@ -92,7 +97,7 @@ svdᴹ₆ = svd(Matrix(Aᴹ₆))
 svdᴹ₈ = svd(Matrix(Aᴹ₈))
 svdᴹ₁₀ = svd(Matrix(Aᴹ₁₀))
 svd_int = svd(Ā_int)
-svd_df =  svd(Ā_df)
+svd_df = svd(Ā_df)
 svd_emb = svd(Ā_emb)
 
 p = plot(; legend = :topright)

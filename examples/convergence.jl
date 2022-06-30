@@ -3,6 +3,7 @@ if isdefined(@__MODULE__, :LanguageServer)
 end
 
 savedir = "figures/"
+
 # F = tophat
 # F = gaussian
 
@@ -53,8 +54,8 @@ i, M = 5, 100
 i, M = 6, 178
 i, M = 7, 316
 
-# for (i, M) ∈ enumerate(MM)
-for (i, M) ∈ collect(enumerate(MM))[1:4]
+for (i, M) ∈ enumerate(MM)
+    # for (i, M) ∈ collect(enumerate(MM))[1:4]
 
     # F = tophat
     # F = gaussian
@@ -101,7 +102,8 @@ for (i, M) ∈ collect(enumerate(MM))[1:4]
     Dᴹ₂ = circulant(M, -1:1, [1, -2, 1] / Δx^2) # 2th order
     Dᴹ₄ = circulant(M, -2:2, [-1, 16, -30, 16, -1] / 12Δx^2) # 4th order
     Dᴹ₆ = circulant(M, -3:3, [2, -27, 270, -490, 270, -27, 2] / 180Δx^2) # 6th order
-    Dᴹ₈ = circulant(M, -4:4, [-9, 128, -1008, 8064, -14350, 8064, -1008, 128, -9] / 5040Δx^2) # 8th order
+    Dᴹ₈ =
+        circulant(M, -4:4, [-9, 128, -1008, 8064, -14350, 8064, -1008, 128, -9] / 5040Δx^2) # 8th order
     # Dᴹ = Dᴹ₂
     # Dᴹ = Dᴹ₄
     Dᴹ = Dᴹ₆
@@ -143,16 +145,19 @@ for (i, M) ∈ collect(enumerate(MM))[1:4]
     eAᴹ₁₀[i] = relerr(Aᴹ₁₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
     # Explicit reconstruction approach
-    # Wmat = Matrix(W)
+    # IP = interpolation_matrix(1, x, ξ)
+    Wmat = Matrix(W)
     operators.int.r[i] = Inf
     for λ ∈ λ_range
         λ = n_sample * λ
         # R = (W'W + λ * I) \ Wmat'
-        # # R =  Wmat' / (W*W' + λ * I)
-        R = (U * Ū') / (Ū * Ū' + λ * I)
+        R = Wmat' / (W * W' + λ * I)
+        # R = (U * Ū') / (Ū * Ū' + λ * I)
+        # R = (U * Ū' + λ * IP) / (Ū * Ū' + λ * I)
         # plotmat(R; aspect_ratio = M / N)
         Ā = W * Aᴺ * R
         # plotmat(Ā)
+        # r = relerr(Ā, long.ū, t_long; abstol = 1e-8 / M, reltol = 1e-6 / M)
         r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
         if r < operators.int.r[i]
             operators.int.λ[i] = λ
@@ -162,98 +167,102 @@ for (i, M) ∈ collect(enumerate(MM))[1:4]
         end
     end
     @show operators.int.λ[i] operators.int.r[i]
+
     # plotmat(W; aspect_ratio = N / M)
     # plotmat(operators.int.R[i]; aspect_ratio = M / N)
+    # plotmat(IP; aspect_ratio = M / N)
+    # plotmat(W * Aᴺ * IP)
     # plotmat(Aᴹ)
     # plotmat(operators.int.Ā[i])
     # plotmat(operators.int.Ā[i] - Aᴹ)
 
     eĀ_int[i] = relerr(operators.int.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
-    # Fit non-intrusively using least squares on snapshots matrices
-    operators.df.r[i] = Inf
-    λ_diff_range = [1e-9]
-    # λ_diff_range = [1e-12]
-    for λ_conv ∈ λ_range, λ_diff ∈ λ_diff_range
-        λ₁ = n_sample * λ_conv
-        λ₂ = n_sample * λ_diff / M
-        # Ā = (dŪdt * Ū') / (Ū * Ū')
-        # Ā = dŪdt * Ū' / (Ū * Ū' + λ * I)
-        Ā = (dŪdt * Ū' + λ₁ * Aᴹ + λ₂ * Dᴹ₆) / (Ū * Ū' + (λ₁ + λ₂) * I)
-        # plotmat(Ā)
-        # plotmat(Ā - Aᴹ)
-        r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
-        if r < operators.df.r[i]
-            operators.df.λ[i] = λ₁
-            operators.df.r[i] = r
-            operators.df.Ā[i] = Ā
-        end
-    end
-    @show operators.df.λ[i] operators.df.r[i]
-    # plotmat(operators.df.Ā[i])
-    # plotmat(operators.df.Ā[i] - Aᴹ)
-
-    eĀ_df[i] = relerr(operators.df.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-
-    # D = circulant(M, [-1, 0, 1], [1.0, -2.0, 1.0] / Δx^2)
-    # Ā_classic = Aᴹ + Diagonal(1 / 3 .* h.(x) .* dh.(x)) * D
-    # plotmat(Ā_classic)
+    # # Fit non-intrusively using least squares on snapshots matrices
+    # operators.df.r[i] = Inf
+    # λ_diff_range = [1e-9]
+    # # λ_diff_range = [1e-12]
+    # for λ_conv ∈ λ_range, λ_diff ∈ λ_diff_range
+    #     λ₁ = n_sample * λ_conv
+    #     λ₂ = n_sample * λ_diff / M
+    #     # Ā = (dŪdt * Ū') / (Ū * Ū')
+    #     # Ā = dŪdt * Ū' / (Ū * Ū' + λ * I)
+    #     Ā = (dŪdt * Ū' + λ₁ * Aᴹ + λ₂ * Dᴹ₆) / (Ū * Ū' + (λ₁ + λ₂) * I)
+    #     # plotmat(Ā)
+    #     # plotmat(Ā - Aᴹ)
+    #     r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
+    #     if r < operators.df.r[i]
+    #         operators.df.λ[i] = λ₁
+    #         operators.df.r[i] = r
+    #         operators.df.Ā[i] = Ā
+    #     end
+    # end
+    # @show operators.df.λ[i] operators.df.r[i]
+    # # plotmat(operators.df.Ā[i])
+    # # plotmat(operators.df.Ā[i] - Aᴹ)
     #
-    # eĀ_classic[i] = relerr(Ā_classic, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
-
-    fit = create_loss_fit(
-        train.ū,
-        t_train;
-        n_sample = 10,
-        n_time = 20,
-        reltol = 1e-7,
-        abstol = 1e-9,
-    )
-    prior = create_loss_prior(Matrix(Aᴹ))
-    stab = create_loss_prior(Matrix(Dᴹ))
-
-    # Initial state
-    state = create_initial_state(Matrix(Aᴹ))
-    operators.emb.Ā[i] = Aᴹ_mat
-    operators.emb.r[i] = Inf
-
-    λ_diff_range = [1e-7 / M]
-    # λ_diff_range = [0.0]
-    for λ_conv ∈ λ_range[1], λ_diff ∈ λ_diff_range
-        # loss = begin
-        #     A -> fit(A) + λ_conv * prior(A) + λ_diff * stab(A)
-        # end
-        loss = create_loss_mixed((fit, prior, stab), (1.0, λ_conv, λ_diff))
-        # display(plotmat(first(DiscreteFiltering.Zygote.gradient(loss, Matrix(Aᴹ)))))
-        state = fit_embedded(
-            state,
-            loss;
-            α = 0.01,
-            n_iter = 1000,
-            testloss = A -> relerr(A, valid.ū, t_valid),
-            ntestloss = 10,
-            doplot = true,
-        )
-        Ā = state.A_min
-        r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
-        if r < operators.emb.r[i]
-            operators.emb.λ[i] = λ_conv
-            operators.emb.r[i] = r
-            operators.emb.Ā[i] = Ā
-        end
-    end
-    @show operators.emb.λ[i] operators.emb.r[i]
-    # plotmat(operators.emb.Ā[i])
-    # plotmat(Aᴹ)
-    # plotmat(state.A)
-    # plotmat(state.A - Aᴹ)
-    # plotmat(Ā_emb - Aᴹ)
-    # plotmat(Ā_emb)
-    # plot(state.hist_i, state.hist_r)
-    # plotmat(operators.emb.Ā[i])
-    # plotmat(operators.emb.Ā[i] - Aᴹ)
-
-    eĀ_emb[i] = relerr(operators.emb.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    # eĀ_df[i] = relerr(operators.df.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    #
+    # # D = circulant(M, [-1, 0, 1], [1.0, -2.0, 1.0] / Δx^2)
+    # # Ā_classic = Aᴹ + Diagonal(1 / 3 .* h.(x) .* dh.(x)) * D
+    # # plotmat(Ā_classic)
+    # #
+    # # eĀ_classic[i] = relerr(Ā_classic, test.ū₀, test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
+    #
+    # fit = create_loss_fit(
+    #     train.ū,
+    #     t_train;
+    #     n_sample = 1000,
+    #     n_time = 50,
+    #     reltol = 1e-7,
+    #     abstol = 1e-9,
+    #     sensealg = BacksolveAdjoint(),
+    #     # sensealg = InterpolatingAdjoint(),
+    #     # sensealg = QuadratureAdjoint(),
+    # )
+    # prior = create_loss_prior(Matrix(Aᴹ))
+    # stab = create_loss_prior(Matrix(Dᴹ))
+    #
+    # # Initial state
+    # state = create_initial_state(Matrix(Aᴹ))
+    # operators.emb.r[i] = Inf
+    #
+    # λ_diff_range = [1e-9 / M]
+    # # λ_diff_range = [0.0]
+    # for λ_conv ∈ λ_range[1], λ_diff ∈ λ_diff_range
+    #     loss = create_loss_mixed((fit, prior, stab), (1.0, λ_conv, λ_diff))
+    # #     display(plotmat(first(DiscreteFiltering.Zygote.gradient(loss, Matrix(Aᴹ)))))
+    # # end
+    # #
+    #     state = fit_embedded(
+    #         state,
+    #         loss;
+    #         α = 0.01,
+    #         n_iter = 1000,
+    #         testloss = A -> relerr(A, valid.ū, t_valid),
+    #         ntestloss = 10,
+    #         doplot = true,
+    #     )
+    #     Ā = state.A_min
+    #     r = relerr(Ā, valid.ū, t_valid; abstol = 1e-5 / M, reltol = 1e-3 / M)
+    #     if r < operators.emb.r[i]
+    #         operators.emb.λ[i] = λ_conv
+    #         operators.emb.r[i] = r
+    #         operators.emb.Ā[i] = Ā
+    #     end
+    # end
+    # @show operators.emb.λ[i] operators.emb.r[i]
+    # # plotmat(operators.emb.Ā[i])
+    # # plotmat(Aᴹ)
+    # # plotmat(state.A)
+    # # plotmat(state.A - Aᴹ)
+    # # plotmat(Ā_emb - Aᴹ)
+    # # plotmat(Ā_emb)
+    # # plot(state.hist_i, state.hist_r)
+    # # plotmat(operators.emb.Ā[i])
+    # # plotmat(operators.emb.Ā[i] - Aᴹ)
+    #
+    # eĀ_emb[i] = relerr(operators.emb.Ā[i], test.ū, t_test; abstol = 1e-10, reltol = 1e-8)
 
     # e = [int(2π * im * k * x) for x ∈ x, k ∈ -K:K]
     # Ā_fourier = real.(e * Â * e') .* Δx
@@ -303,12 +312,7 @@ filename = "output/K$(K)/convergence/errors_$(F.name).jld2";
 # )
 
 @info("Loading errors from \"$(pwd())/$filename\"")
-(eAᴹ₂,
-    eAᴹ₄,
-    eAᴹ₆,
-    eAᴹ₈,
-    eAᴹ₁₀,
-    eĀ_classic, eĀ_int, eĀ_df, eĀ_emb, eĀ_fourier) = load(
+(eAᴹ₂, eAᴹ₄, eAᴹ₆, eAᴹ₈, eAᴹ₁₀, eĀ_classic, eĀ_int, eĀ_df, eĀ_emb, eĀ_fourier) = load(
     filename,
     "eAᴹ₂",
     "eAᴹ₄",
@@ -351,35 +355,7 @@ plot!(p, MM, eĀ_emb; marker = :xcross, label = L"$\bar{\mathbf{A}}$, embedded"
 # plot!(p, MM, eĀ_fourier; marker = :cross, label = L"$\bar{\mathbf{A}}$, Fourier");
 p
 
-# figsave(p, "convergence_$(F.name)"; savedir = "output", suffices = ("pdf",))
 figsave(p, "convergence_$(F.name)"; savedir, size = (400, 300))
 
 gr()
 pgfplotsx()
-
-[
-    :none,
-    :auto,
-    :circle,
-    :rect,
-    :star5,
-    :diamond,
-    :hexagon,
-    :cross,
-    :xcross,
-    :utriangle,
-    :dtriangle,
-    :rtriangle,
-    :ltriangle,
-    :pentagon,
-    :heptagon,
-    :octagon,
-    :star4,
-    :star6,
-    :star7,
-    :star8,
-    :vline,
-    :hline,
-    :+,
-    :x,
-]

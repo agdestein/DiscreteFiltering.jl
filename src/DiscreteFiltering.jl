@@ -91,9 +91,10 @@ include("utils/circulant.jl")
 include("utils/plotmat.jl")
 include("utils/figsave.jl")
 
-export create_tophat, create_gaussian, filter_matrix
+export create_tophat, create_gaussian, filter_matrix, interpolation_matrix
 export S, S!, S_stencil!
-export create_loss_fit, create_loss_prior, create_initial_state, create_loss_mixed, fit_embedded
+export create_loss_fit,
+    create_loss_prior, create_initial_state, create_loss_mixed, fit_embedded
 export relerrs, relerr, spectral_relerr
 export create_data_exact, create_data_dns, create_data_dns_stencil, create_data_filtered
 export u, dudt, ū, dūdt

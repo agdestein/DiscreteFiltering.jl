@@ -23,11 +23,12 @@ for (i, t) in enumerate(t_test)
     # plot!(p, specerrs_Aᴹ₂[1:M÷2, i]; label = "Aᴹ₂");
     # plot!(p, specerrs_Aᴹ₄[1:M÷2, i]; label = "Aᴹ₄");
     # plot!(p, specerrs_Aᴹ₆[1:M÷2, i]; label = "Aᴹ₆");
-    plot!(p, specerrs_Aᴹ₈[1:M÷2, i]; label = "Aᴹ₈");
+    plot!(p, specerrs_Aᴹ₈[1:M÷2, i]; label = "Aᴹ₈")
     plot!(p, specerrs_Aᴹ₁₀[1:M÷2, i]; label = "Aᴹ₁₀")
-    plot!(p, specerrs_exp[1:M÷2, i]; label = "Explicit");
+    plot!(p, specerrs_exp[1:M÷2, i]; label = "Explicit")
     plot!(p, specerrs_ls[1:M÷2, i]; label = "Least squares")
     plot!(p, specerrs_int[1:M÷2, i]; label = "Intrusive")
     p
-    display(p); sleep(0.1)
+    display(p)
+    sleep(0.1)
 end

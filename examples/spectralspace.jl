@@ -11,10 +11,7 @@ plotmat(abs.(fft(Ā_ls)))
 
 λ = 1e-8 * size(Ū, 2)
 Â_ls = ∂Û∂t * Û' / (Û * Û' + λ * I)
-Âᴹ =
-    2π *
-    im *
-    blockdiag(-spdiagm(collect(0:(M ÷ 2 - 1))), spdiagm(collect((M ÷ 2 - 1):-1:0)))
+Âᴹ = 2π * im * blockdiag(-spdiagm(collect(0:(M÷2-1))), spdiagm(collect((M÷2-1):-1:0)))
 M̂ = Â_ls - Âᴹ
 
 DFT = [exp(-2π * im * (k - 1) * (m - 1) / M) for k = 1:M, m = 1:M]
@@ -29,7 +26,7 @@ plotmat(imag.(DFT * Ā_ls * IDFT))
 
 plotmat(real.(Aᴹ))
 plotmat(real.(DFT * Âᴹ * IDFT))
-(DFT * Âᴹ * IDFT)[50, :]
+(DFT*Âᴹ*IDFT)[50, :]
 
 plotmat(real.(Â_ls))
 plotmat(imag.(Â_ls))

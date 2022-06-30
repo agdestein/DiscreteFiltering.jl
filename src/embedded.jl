@@ -1,18 +1,19 @@
 """
-Create embedded loss function on dataset.
+    create_loss_fit(u, t; n_sample = size(u, 2), n_time = length(t) - 1, kwargs...)
+
+Create embedded loss function on dataset, evaluating at `n_sample` random initial
+conditions and `n_time` random time steps at each call.
+
+The keyword arguments `kwargs` are passed to the ODE-solver `S`.
 """
-function create_loss_fit(
-    u,
-    t;
-    n_sample = size(u, 2),
-    n_time = length(t) - 1,
-    kwargs...,
-)
+function create_loss_fit(u, t; n_sample = size(u, 2), n_time = length(t) - 1, kwargs...)
     u₀ = u[:, :, 1]
     function loss(A)
         # randperm(n)
         iu = Zygote.@ignore sort(shuffle(1:size(u, 2))[1:n_sample])
         it = Zygote.@ignore sort(shuffle(2:length(t))[1:n_time])
+        # iu = 1:n_sample
+        # it = 2:n_time
         it = [1; it]
         uₜ = u[:, iu, it]
         sum(abs2, S(A, u₀[:, iu], t[it]; kwargs...) - uₜ) / prod(size(uₜ))
@@ -20,8 +21,18 @@ function create_loss_fit(
     loss
 end
 
-create_loss_prior(A_ref) = A -> sum(abs2, A - A_ref) / prod(size(A_ref))
+"""
+    create_loss_prior(A_ref)
 
+Create a prior loss functino comparing the operator `A` to a reference operator `A_ref`.
+"""
+create_loss_prior(A_ref) = (A -> sum(abs2, A - A_ref) / prod(size(A_ref)))
+
+"""
+    create_initial_state(A_ref)
+
+Create initial state for the ADAM optimizer.
+"""
 create_initial_state(A_ref) = (;
     A = Matrix(A_ref),
     A_min = Matrix(A_ref),
@@ -31,7 +42,13 @@ create_initial_state(A_ref) = (;
     hist_r = zeros(0),
 )
 
-create_loss_mixed(losses, weights) = A -> sum(λ * loss(A) for (loss, λ) ∈ zip(losses, weights))
+"""
+    create_loss_mixed(losses, weights)
+
+Create a composed loss function ``L(A) = \\sum_i w_i L_i(A)``.
+"""
+create_loss_mixed(losses, weights) =
+    A -> sum(λ * loss(A) for (loss, λ) ∈ zip(losses, weights))
 
 """
     fit_embedded(
@@ -45,10 +62,13 @@ create_loss_mixed(losses, weights) = A -> sum(λ * loss(A) for (loss, λ) ∈ zi
         testloss,
         ntestloss = 10,
         doplot = true,
-        kwargs...,
     )
 
 Fit operator to data while embedded in ODE solver using the ADAM optimizer.
+
+If `doplot`, a real time plot of the validation performance is plotted.
+
+https://arxiv.org/abs/1412.6980
 """
 function fit_embedded(
     state,
@@ -61,7 +81,6 @@ function fit_embedded(
     testloss,
     ntestloss = 10,
     doplot = true,
-    kwargs...,
 )
     doplot && gr()
 
@@ -92,7 +111,7 @@ function fit_embedded(
                 r_min = r
                 A_min .= A
             end
-            push!(hist_i, n_last+i)
+            push!(hist_i, n_last + i)
             push!(hist_r, r)
             doplot && display(
                 plot(
